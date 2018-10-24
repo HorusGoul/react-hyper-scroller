@@ -1,0 +1,329 @@
+import autobind from "autobind-decorator";
+import * as React from "react";
+import { findDOMNode } from "react-dom";
+import VirtualScrollerCacheService from "./VirtualScrollerCacheService";
+
+export type VirtualScrollerTargetView = Element | Window;
+
+interface IVirtualScrollerRowRef {
+  ref: React.ReactInstance;
+  DOMNode: Element | Text;
+}
+
+export interface IVirtualScrollerProps {
+  /**
+   * Max number of rows / items.
+   */
+  rowCount: number;
+
+  /**
+   * Estimated height that will be used on initial
+   * render for each item.
+   */
+  defaultRowHeight: number;
+
+  /**
+   * Function that will be called when rendering an item.
+   *
+   * @param index Item's index.
+   * @param rowRef Ref that should be attached to each item's root.
+   * @param onItemUpdate Method that will trigger an update projection. This should be called
+   *                     when the item changes its size. (e.g. The item has a button which
+   *                     expands item's height showing new content).
+   */
+  rowRenderer(
+    index: number,
+    rowRef: (rowRef: React.ReactInstance) => void,
+    onItemUpdate: () => void,
+  ): React.ReactNode;
+
+  /**
+   * Cache key on VirtualScrollerCacheService.
+   *
+   * @defaultValue `VirtualScrollerCacheService.getNextId()`
+   */
+  cacheKey?: string;
+
+  /**
+   * Number of rows that will be rendered before and after the
+   * ones that are shown in the viewport.
+   *
+   * @defaultValue 2
+   */
+  overscanRowCount?: number;
+
+  /**
+   * Initial scroll position.
+   *
+   * @defaultValue 0
+   */
+  initialScrollPosition?: number;
+
+  /**
+   * Target view that will be used as a scroll view. You should make sure
+   * that the ref is not null.
+   *
+   * @defaultValue `window`
+   */
+  targetView?: VirtualScrollerTargetView;
+}
+
+interface IVirtualScrollerState {
+  paddingTop: number;
+  paddingBottom: number;
+  firstIndex: number;
+  lastIndex: number;
+}
+
+const defaultVirtualScrollerState = {
+  firstIndex: 0,
+  lastIndex: 0,
+  paddingBottom: 0,
+  paddingTop: 0,
+};
+
+@autobind
+export class VirtualScroller extends React.Component<IVirtualScrollerProps, IVirtualScrollerState> {
+  public static defaultProps: IVirtualScrollerProps = {
+    cacheKey: VirtualScrollerCacheService.getNextId(),
+    defaultRowHeight: 0,
+    overscanRowCount: 2,
+    rowCount: 0,
+    rowRenderer: () => null,
+    initialScrollPosition: 0,
+    targetView: window,
+  };
+
+  public state: IVirtualScrollerState = defaultVirtualScrollerState;
+
+  private listDiv: HTMLDivElement;
+  private rowRefs: { [key: number]: IVirtualScrollerRowRef } = {};
+
+  public componentDidMount() {
+    this.addEventListeners();
+    this.updateProjection();
+    this.restoreScroll();
+  }
+
+  public componentWillUnmount() {
+    this.removeEventListeners();
+    this.saveScrollPosition();
+  }
+
+  public componentDidUpdate(prevProps: IVirtualScrollerProps) {
+    if (this.props !== prevProps) {
+      if (prevProps.cacheKey !== this.props.cacheKey) {
+        this.restoreScroll();
+      }
+
+      this.updateProjection();
+    }
+  }
+
+  public componentWillReceiveProps(nextProps: IVirtualScrollerProps) {
+    if (nextProps !== this.props) {
+      if (nextProps.cacheKey !== this.props.cacheKey) {
+        this.saveScrollPosition();
+        this.setState({ ...defaultVirtualScrollerState });
+      }
+
+      this.updateProjection(nextProps);
+    }
+  }
+
+  public render() {
+    const { rowRenderer, rowCount } = this.props;
+    const { firstIndex, lastIndex, paddingBottom, paddingTop } = this.state;
+
+    const projection = [];
+
+    if (rowCount) {
+      for (let i = firstIndex; i <= lastIndex; i++) {
+        projection[projection.length] = rowRenderer(
+          i,
+          this.createRowRefListener(i),
+          this.createItemUpdateListener(i),
+        );
+      }
+    }
+
+    return (
+      <div
+        ref={ref => (this.listDiv = ref)}
+        style={{
+          paddingBottom,
+          paddingTop,
+        }}
+      >
+        {projection}
+      </div>
+    );
+  }
+
+  private onResizeListener = (e: Event) => this.onResize(e);
+  private onScrollListener = (e: Event) => this.onScroll(e);
+
+  private addEventListeners() {
+    const { targetView } = this.props;
+
+    window.addEventListener("resize", this.onResizeListener, false);
+    targetView.addEventListener("scroll", this.onScrollListener, false);
+  }
+
+  private removeEventListeners() {
+    const { targetView } = this.props;
+
+    window.removeEventListener("resize", this.onResizeListener);
+    targetView.removeEventListener("scroll", this.onScrollListener);
+  }
+
+  private updateProjection(props: IVirtualScrollerProps = this.props) {
+    const { rowCount, overscanRowCount, targetView } = props;
+
+    if (!rowCount) {
+      return;
+    }
+
+    const viewport =
+      targetView instanceof Window
+        ? {
+            height: targetView.innerHeight,
+            scrollY: targetView.scrollY - this.listDiv.offsetTop,
+          }
+        : {
+            height: targetView.clientHeight,
+            scrollY: targetView.scrollTop - this.listDiv.offsetTop,
+          };
+
+    if (viewport.scrollY < 0) {
+      viewport.scrollY = 0;
+    }
+
+    const visibleItemsMaxTop = viewport.scrollY + viewport.height;
+    let visibleItemsHeight = 0;
+    let itemsHeightSum = 0;
+    let firstIndex;
+    let lastIndex;
+    let paddingTop = 0;
+    let paddingBottom = 0;
+
+    for (let i = 0; i < rowCount; i++) {
+      const prevSum = itemsHeightSum;
+      itemsHeightSum += this.calculateRowHeight(i);
+
+      if (itemsHeightSum >= viewport.scrollY && isNaN(firstIndex)) {
+        paddingTop = prevSum;
+        firstIndex = i - overscanRowCount;
+
+        if (firstIndex < 0) {
+          firstIndex = 0;
+        }
+
+        for (let j = firstIndex; j < i; j++) {
+          paddingTop -= this.calculateRowHeight(j);
+        }
+      }
+
+      if (
+        (itemsHeightSum >= visibleItemsMaxTop && !lastIndex) ||
+        (i === rowCount - 1 && !lastIndex)
+      ) {
+        lastIndex = i + overscanRowCount;
+        visibleItemsHeight = itemsHeightSum;
+
+        if (lastIndex >= rowCount) {
+          lastIndex = rowCount - 1;
+        }
+
+        for (let j = lastIndex; j > i; j--) {
+          visibleItemsHeight += this.calculateRowHeight(j);
+        }
+      }
+    }
+
+    paddingBottom = itemsHeightSum - visibleItemsHeight;
+
+    if (paddingBottom < 0) {
+      paddingBottom = 0;
+    }
+
+    this.setState({
+      firstIndex,
+      lastIndex,
+      paddingBottom,
+      paddingTop,
+    });
+  }
+
+  private createRowRefListener(index: number) {
+    return (ref: React.ReactInstance) => this.setRowRef(index, ref);
+  }
+
+  private setRowRef(index: number, ref: React.ReactInstance) {
+    if (!ref) {
+      this.rowRefs[index] = null;
+      return;
+    }
+
+    this.rowRefs[index] = {
+      ref,
+      DOMNode: findDOMNode(ref),
+    };
+  }
+
+  private calculateRowHeight(index: number) {
+    const { cacheKey, defaultRowHeight } = this.props;
+    const cache = VirtualScrollerCacheService.getCache(cacheKey);
+    const height = cache[index];
+    const hasRef = !!this.rowRefs[index];
+
+    if (hasRef) {
+      window.requestAnimationFrame(() => {
+        // Request ref again just in case it has been removed.
+        const ref = this.rowRefs[index];
+
+        if (ref && ref.DOMNode) {
+          cache[index] = (ref.DOMNode as Element).getBoundingClientRect().height;
+        }
+      });
+    }
+
+    return height || defaultRowHeight;
+  }
+
+  private onScroll(_e: Event) {
+    this.updateProjection();
+  }
+
+  private onResize(_e: Event) {
+    this.updateProjection();
+  }
+
+  private saveScrollPosition() {
+    const cache = VirtualScrollerCacheService.getCache(this.props.cacheKey);
+    cache.scrollPosition = this.getScrollPosition();
+  }
+
+  private restoreScroll() {
+    const { targetView, cacheKey, initialScrollPosition } = this.props;
+    const cache = VirtualScrollerCacheService.getCache(cacheKey);
+    const scrollPosition = cache.scrollPosition || initialScrollPosition;
+
+    window.requestAnimationFrame(() => targetView.scrollTo(0, scrollPosition));
+  }
+
+  private getScrollPosition() {
+    const { initialScrollPosition, targetView } = this.props;
+    const y = targetView instanceof Window ? targetView.scrollY : targetView.scrollTop;
+
+    return y < initialScrollPosition ? initialScrollPosition : y;
+  }
+
+  private createItemUpdateListener(index: number) {
+    return () => this.onItemUpdate(index);
+  }
+
+  private onItemUpdate(_index: number): void {
+    this.updateProjection();
+  }
+}
