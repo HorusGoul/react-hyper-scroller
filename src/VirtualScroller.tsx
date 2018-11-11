@@ -60,8 +60,7 @@ export interface IVirtualScrollerProps {
   initialScrollPosition?: number;
 
   /**
-   * Target view that will be used as a scroll view. You should make sure
-   * that the ref is not null.
+   * Target view that will be used as a scroll view.
    *
    * @defaultValue `window`
    */
@@ -100,34 +99,42 @@ export class VirtualScroller extends React.Component<IVirtualScrollerProps, IVir
   private rowRefs: { [key: number]: IVirtualScrollerRowRef } = {};
 
   public componentDidMount() {
-    this.addEventListeners();
-    this.updateProjection();
-    this.restoreScroll();
+    if (this.props.targetView) {
+      this.addEventListeners();
+      this.updateProjection();
+      this.restoreScroll();
+    }
   }
 
   public componentWillUnmount() {
-    this.removeEventListeners();
-    this.saveScrollPosition();
+    if (this.props.targetView) {
+      this.removeEventListeners();
+      this.saveScrollPosition();
+    }
   }
 
   public componentDidUpdate(prevProps: IVirtualScrollerProps) {
     if (this.props !== prevProps) {
-      if (prevProps.cacheKey !== this.props.cacheKey) {
-        this.restoreScroll();
+      if (prevProps.targetView !== this.props.targetView) {
+        if (prevProps.targetView !== null) {
+          this.removeEventListeners(prevProps.targetView);
+        }
+
+        if (this.props.targetView) {
+          this.addEventListeners();
+        }
       }
 
-      this.updateProjection();
-    }
-  }
+      if (this.props.targetView) {
+        if (prevProps.cacheKey !== this.props.cacheKey) {
+          this.saveScrollPosition(prevProps.cacheKey);
+          this.setState({
+            ...defaultVirtualScrollerState,
+          }, () => this.restoreScroll());
+        }
 
-  public componentWillReceiveProps(nextProps: IVirtualScrollerProps) {
-    if (nextProps !== this.props) {
-      if (nextProps.cacheKey !== this.props.cacheKey) {
-        this.saveScrollPosition();
-        this.setState({ ...defaultVirtualScrollerState });
+        this.updateProjection();
       }
-
-      this.updateProjection(nextProps);
     }
   }
 
@@ -163,16 +170,12 @@ export class VirtualScroller extends React.Component<IVirtualScrollerProps, IVir
   private onResizeListener = (e: Event) => this.onResize(e);
   private onScrollListener = (e: Event) => this.onScroll(e);
 
-  private addEventListeners() {
-    const { targetView } = this.props;
-
+  private addEventListeners(targetView: VirtualScrollerTargetView = this.props.targetView) {
     window.addEventListener("resize", this.onResizeListener, false);
     targetView.addEventListener("scroll", this.onScrollListener, false);
   }
 
-  private removeEventListeners() {
-    const { targetView } = this.props;
-
+  private removeEventListeners(targetView: VirtualScrollerTargetView = this.props.targetView) {
     window.removeEventListener("resize", this.onResizeListener);
     targetView.removeEventListener("scroll", this.onScrollListener);
   }
@@ -299,8 +302,8 @@ export class VirtualScroller extends React.Component<IVirtualScrollerProps, IVir
     this.updateProjection();
   }
 
-  private saveScrollPosition() {
-    const cache = VirtualScrollerCacheService.getCache(this.props.cacheKey);
+  private saveScrollPosition(cacheKey: string = this.props.cacheKey) {
+    const cache = VirtualScrollerCacheService.getCache(cacheKey);
     cache.scrollPosition = this.getScrollPosition();
   }
 
