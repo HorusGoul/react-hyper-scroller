@@ -327,6 +327,10 @@ export class VirtualScroller extends React.Component<IVirtualScrollerProps, IVir
   }
 
   private onItemUpdate(_index: number): void {
-    this.updateProjection();
+    const { targetView } = this.props;
+
+    if (targetView) {
+      this.updateProjection();
+    }
   }
 }
