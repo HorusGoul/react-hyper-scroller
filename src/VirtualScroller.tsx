@@ -187,16 +187,15 @@ export class VirtualScroller extends React.Component<IVirtualScrollerProps, IVir
       return;
     }
 
-    const viewport =
-      targetView instanceof Window
-        ? {
-            height: targetView.innerHeight,
-            scrollY: targetView.scrollY - this.listDiv.offsetTop,
-          }
-        : {
-            height: targetView.clientHeight,
-            scrollY: targetView.scrollTop - this.listDiv.offsetTop,
-          };
+    const viewport = this.targetViewIsWindow()
+      ? {
+          height: (targetView as Window).innerHeight,
+          scrollY: (targetView as Window).scrollY - this.listDiv.offsetTop,
+        }
+      : {
+          height: (targetView as Element).clientHeight,
+          scrollY: (targetView as Element).scrollTop - this.listDiv.offsetTop,
+        };
 
     if (viewport.scrollY < 0) {
       viewport.scrollY = 0;
@@ -317,7 +316,9 @@ export class VirtualScroller extends React.Component<IVirtualScrollerProps, IVir
 
   private getScrollPosition() {
     const { initialScrollPosition, targetView } = this.props;
-    const y = targetView instanceof Window ? targetView.scrollY : targetView.scrollTop;
+    const y = this.targetViewIsWindow()
+      ? (targetView as Window).scrollY
+      : (targetView as Element).scrollTop;
 
     return y < initialScrollPosition ? initialScrollPosition : y;
   }
@@ -332,5 +333,9 @@ export class VirtualScroller extends React.Component<IVirtualScrollerProps, IVir
     if (targetView) {
       this.updateProjection();
     }
+  }
+
+  private targetViewIsWindow() {
+    return window === this.props.targetView;
   }
 }
