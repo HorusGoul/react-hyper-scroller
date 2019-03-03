@@ -1,4 +1,3 @@
-import autobind from "autobind-decorator";
 import * as React from "react";
 import { findDOMNode } from "react-dom";
 import VirtualScrollerCacheService from "./VirtualScrollerCacheService";
@@ -80,8 +79,6 @@ const defaultVirtualScrollerState = {
   paddingBottom: 0,
   paddingTop: 0,
 };
-
-@autobind
 export class VirtualScroller extends React.Component<IVirtualScrollerProps, IVirtualScrollerState> {
   public static defaultProps: IVirtualScrollerProps = {
     cacheKey: VirtualScrollerCacheService.getNextId(),
@@ -128,9 +125,12 @@ export class VirtualScroller extends React.Component<IVirtualScrollerProps, IVir
       if (this.props.targetView) {
         if (prevProps.cacheKey !== this.props.cacheKey) {
           this.saveScrollPosition(prevProps.cacheKey);
-          this.setState({
-            ...defaultVirtualScrollerState,
-          }, () => this.restoreScroll());
+          this.setState(
+            {
+              ...defaultVirtualScrollerState,
+            },
+            () => this.restoreScroll(),
+          );
         }
 
         this.updateProjection();
