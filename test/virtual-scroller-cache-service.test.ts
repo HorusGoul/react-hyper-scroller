@@ -1,11 +1,4 @@
-import { VirtualScroller } from "../src/react-hyper-scroller";
 import { VirtualScrollerCacheService } from "../src/VirtualScrollerCacheService";
-
-describe("VirtualScroller", () => {
-  it("is truthy", () => {
-    expect(VirtualScroller).toBeTruthy();
-  });
-});
 
 describe("VirtualScrollerCacheService", () => {
   it("creates cache", () => {
