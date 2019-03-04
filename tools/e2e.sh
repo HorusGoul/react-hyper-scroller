@@ -4,18 +4,17 @@ function killAppServer {
   ps axf | grep test-app | grep -v grep | grep start.js | awk '{ print "kill " $1 }' | sh
 }
 
-
 killAppServer
 
 npm run build
 
-cd test/test-app
+cd e2e/test-app
 
 npm run start &
 
 cd ../../
 
-npm run debug
+npm run test:e2e
 
 killAppServer
 
