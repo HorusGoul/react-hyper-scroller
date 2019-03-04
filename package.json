@@ -28,8 +28,8 @@
     "prebuild": "rimraf dist",
     "build": "tsc --module commonjs && rollup -c rollup.config.ts && typedoc --out docs --target es6 --theme minimal --mode file src --readme README.md",
     "start": "rollup -c rollup.config.ts -w",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "jest ./test",
+    "test:watch": "jest ./test --watch",
     "test:prod": "npm run lint && npm run test -- --coverage --no-cache",
     "deploy-docs": "ts-node tools/gh-pages-publish",
     "report-coverage": "cat ./coverage/lcov.info | coveralls",
@@ -39,7 +39,7 @@
     "precommit": "lint-staged",
     "lint:fix": "tslint {src,test,tools}/**/*.{ts,tsx} *.ts --fix -t prose -c tslint.json --exclude src/**/*.d.ts",
     "prelint:fix": "prettier --write {src,test,tools}/**/*.{ts,tsx,json}",
-    "debug": "NODE_ENV=debug npm run test"
+    "test:e2e": "jest ./e2e --collectCoverage=false"
   },
   "lint-staged": {
     "{src,test}/**/*.ts": [

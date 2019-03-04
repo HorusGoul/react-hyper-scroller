@@ -9,11 +9,20 @@ const CONFIG: LaunchOptions =
       }
     : {};
 
-describe("on page load", () => {
+describe("on page load", async () => {
+  let browser;
+
+  beforeAll(async () => {
+    browser = await launch(CONFIG);
+  });
+
+  afterAll(async () => {
+    await browser.close();
+  });
+
   test(
     "h1 loads correctly",
     async () => {
-      const browser = await launch(CONFIG);
       const page = (await browser.pages())[0];
 
       page.emulate({
@@ -28,7 +37,6 @@ describe("on page load", () => {
 
       const html = await page.$eval("#root", e => e.innerHTML);
       expect(html).toContain(`Item 0`);
-      browser.close();
     },
     16000,
   );
