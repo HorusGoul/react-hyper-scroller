@@ -30,6 +30,7 @@
     "start": "rollup -c rollup.config.ts -w",
     "test": "jest ./test",
     "test:watch": "jest ./test --watch",
+    "test:e2e": "jest ./e2e --collectCoverage=false",
     "test:prod": "npm run lint && npm run test -- --coverage --no-cache",
     "deploy-docs": "ts-node tools/gh-pages-publish",
     "report-coverage": "cat ./coverage/lcov.info | coveralls",
@@ -38,8 +39,7 @@
     "semantic-release-prepare": "ts-node tools/semantic-release-prepare",
     "precommit": "lint-staged",
     "lint:fix": "tslint {src,test,tools}/**/*.{ts,tsx} *.ts --fix -t prose -c tslint.json --exclude src/**/*.d.ts",
-    "prelint:fix": "prettier --write {src,test,tools}/**/*.{ts,tsx,json}",
-    "test:e2e": "jest ./e2e --collectCoverage=false"
+    "prelint:fix": "prettier --write {src,test,tools}/**/*.{ts,tsx,json}"
   },
   "lint-staged": {
     "{src,test}/**/*.ts": [
@@ -54,7 +54,7 @@
   },
   "jest": {
     "transform": {
-      ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+      ".(ts|tsx)": "ts-jest"
     },
     "testEnvironment": "jsdom",
     "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
