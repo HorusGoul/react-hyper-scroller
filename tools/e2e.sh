@@ -6,15 +6,17 @@ function killAppServer {
 
 killAppServer
 
-npm run build
-
 cd e2e/test-app
 
+npm ci
 npm run start &
 
 cd ../../
 
 npm run test:e2e
+TEST_STATUS=$?
 
 killAppServer
+
+exit $TEST_STATUS
 
