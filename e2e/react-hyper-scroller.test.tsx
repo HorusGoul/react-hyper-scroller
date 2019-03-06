@@ -70,15 +70,11 @@ describe("e2e tests", async () => {
 
       await page.evaluate(`
         (async () => {
-          if (window.scrollY + window.innerHeight >= document.body.offsetHeight) {
-            return;
-          }
-
           const timeout = new Promise((resolve, reject) => {
             setTimeout(() => {
               window.scrollBy(0, window.innerHeight);
               resolve();
-            }, 50);
+            }, 100);
           });
 
           await timeout;
