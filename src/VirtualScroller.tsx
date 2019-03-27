@@ -64,6 +64,17 @@ export interface IVirtualScrollerProps {
    * @defaultValue `window`
    */
   targetView?: VirtualScrollerTargetView;
+
+  /**
+   * Allows telling the component whether you want it to
+   * restore the scroll or not.
+   *
+   * Scroll restoration depends on the `cacheKey` as it
+   * will retrieve the latest scroll position from the cache.
+   *
+   * @defaultValue false
+   */
+  scrollRestoration?: boolean;
 }
 
 interface IVirtualScrollerState {
@@ -80,8 +91,14 @@ const defaultVirtualScrollerState = {
   paddingTop: 0,
 };
 
-function isWindow(targetView: Element | Window) {
+function isWindow(targetView: VirtualScrollerTargetView) {
   return window === targetView;
+}
+
+function scrollTo(targetView: VirtualScrollerTargetView, x: number, y: number) {
+  window.requestAnimationFrame(() => {
+    targetView.scrollTo(x, y);
+  });
 }
 
 function VirtualScrollerHooks({
@@ -92,6 +109,7 @@ function VirtualScrollerHooks({
   overscanRowCount = 2,
   defaultRowHeight = 0,
   rowRenderer = () => null,
+  scrollRestoration = false,
 }: IVirtualScrollerProps) {
   const [state, setState] = useState<IVirtualScrollerState>(() => ({
     ...defaultVirtualScrollerState,
@@ -100,15 +118,18 @@ function VirtualScrollerHooks({
   const listDivRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<{ [key: number]: IVirtualScrollerRowRef }>({});
 
+  const scrollToInitialPosition = useCallback(
+    () => {
+      scrollTo(targetView, 0, initialScrollPosition);
+    },
+    [targetView, initialScrollPosition],
+  );
+
   const restoreScroll = useCallback(
     () => {
-      const scrollPosition = cache.scrollPosition || initialScrollPosition;
-
-      window.requestAnimationFrame(() => {
-        targetView.scrollTo(0, scrollPosition);
-      });
+      scrollTo(targetView, 0, cache.scrollPosition);
     },
-    [targetView, cache, initialScrollPosition],
+    [targetView, cache.scrollPosition],
   );
 
   const getScrollPosition = useCallback(
@@ -236,11 +257,11 @@ function VirtualScrollerHooks({
         return;
       }
 
-      function onResizeListener(e: Event) {
+      function onResizeListener() {
         updateProjection();
       }
 
-      function onScrollListener(e: Event) {
+      function onScrollListener() {
         updateProjection();
       }
 
@@ -262,7 +283,12 @@ function VirtualScrollerHooks({
       }
 
       setState({ ...defaultVirtualScrollerState });
-      restoreScroll();
+
+      if (scrollRestoration) {
+        restoreScroll();
+      } else {
+        scrollToInitialPosition();
+      }
 
       return () => {
         saveScrollPosition();
