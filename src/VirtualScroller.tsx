@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef, memo } from "react";
+import React, { useEffect, useState, useCallback, useRef, memo, FC, useLayoutEffect } from "react";
 import { findDOMNode } from "react-dom";
 import VirtualScrollerCacheService from "./VirtualScrollerCacheService";
 
@@ -101,16 +101,16 @@ function scrollTo(targetView: VirtualScrollerTargetView, x: number, y: number) {
   });
 }
 
-function VirtualScrollerHooks({
-  targetView = window,
-  initialScrollPosition = 0,
-  cacheKey = VirtualScrollerCacheService.getNextId(),
-  rowCount = 0,
-  overscanRowCount = 2,
-  defaultRowHeight = 0,
-  rowRenderer = () => null,
-  scrollRestoration = false,
-}: IVirtualScrollerProps) {
+const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
+  targetView,
+  initialScrollPosition,
+  cacheKey,
+  rowCount,
+  overscanRowCount,
+  defaultRowHeight,
+  rowRenderer,
+  scrollRestoration,
+}) => {
   const [state, setState] = useState<IVirtualScrollerState>(() => ({
     ...defaultVirtualScrollerState,
   }));
@@ -276,7 +276,7 @@ function VirtualScrollerHooks({
     [targetView, updateProjection],
   );
 
-  useEffect(
+  useLayoutEffect(
     () => {
       if (!targetView) {
         return;
@@ -290,11 +290,24 @@ function VirtualScrollerHooks({
         scrollToInitialPosition();
       }
 
+      updateProjection();
+
       return () => {
         saveScrollPosition();
       };
     },
-    [cacheKey, restoreScroll, saveScrollPosition],
+    [cacheKey, targetView],
+  );
+
+  useLayoutEffect(
+    () => {
+      if (!targetView) {
+        return;
+      }
+
+      updateProjection();
+    },
+    [updateProjection, targetView],
   );
 
   function createRowRefListener(index: number) {
@@ -321,7 +334,7 @@ function VirtualScrollerHooks({
 
   const projection = [];
 
-  if (rowCount) {
+  if (rowCount && state.lastIndex - state.firstIndex > 0) {
     for (let i = state.firstIndex; i <= state.lastIndex; i++) {
       projection[projection.length] = rowRenderer(i, createRowRefListener(i), () =>
         onItemUpdate(i),
@@ -340,6 +353,16 @@ function VirtualScrollerHooks({
       {projection}
     </div>
   );
-}
+};
+
+VirtualScrollerHooks.defaultProps = {
+  targetView: window,
+  initialScrollPosition: 0,
+  cacheKey: VirtualScrollerCacheService.getNextId(),
+  rowCount: 0,
+  overscanRowCount: 2,
+  defaultRowHeight: 0,
+  scrollRestoration: false,
+};
 
 export const VirtualScroller = memo(VirtualScrollerHooks);
