@@ -10,8 +10,13 @@
 npm install --save react-hyper-scroller
 ```
 
+## Demo
+
+[![Edit Window Virtual Scroller v2 Example](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/embed/ym52j0n741?fontsize=14&view=preview)
+
 ## Links
 
+- [Demo](https://codesandbox.io/embed/ym52j0n741?fontsize=14&view=preview)
 - [Typedoc](https://horusgoul.github.io/react-hyper-scroller)
 - [Examples](./examples.md)
 - [Contributing](./contributing.md)
