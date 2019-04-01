@@ -7,13 +7,29 @@ const items = createItems();
 const rowRenderer = createRowRenderer(items);
 
 function App() {
+  const [showing, setShowing] = React.useState(true);
+
+  function toggle() {
+    setShowing(!showing);
+  }
+
   return (
-    <VirtualScroller
-      rowCount={items.length}
-      defaultRowHeight={PRECALCULATED_ITEM_HEIGHT}
-      rowRenderer={rowRenderer}
-      targetView={window}
-    />
+    <>
+      <button id="toggle-btn" data-testid="toggle-btn" onClick={toggle}>
+        Show/Hide scroller
+      </button>
+
+      {showing && (
+        <VirtualScroller
+          rowCount={items.length}
+          defaultRowHeight={PRECALCULATED_ITEM_HEIGHT}
+          rowRenderer={rowRenderer}
+          targetView={window}
+          scrollRestoration={true}
+          cacheKey="test-scroller"
+        />
+      )}
+    </>
   );
 }
 

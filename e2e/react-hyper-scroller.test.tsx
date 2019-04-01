@@ -1,39 +1,20 @@
-import { launch, LaunchOptions, Browser } from "puppeteer";
 import { ITEMS_TO_GENERATE } from "./test-app/src/utils";
+import { Page } from "puppeteer";
 
 jest.setTimeout(32000);
 
-const CONFIG: LaunchOptions =
-  process.env.NODE_ENV === "debug"
-    ? {
-        headless: false,
-        slowMo: 250,
-        devtools: true,
-      }
-    : {};
-
 describe("e2e tests", async () => {
-  let browser: Browser;
-
   beforeAll(async () => {
-    browser = await launch(CONFIG);
-  });
-
-  afterAll(async () => {
-    await browser.close();
-  });
-
-  test("VirtualScroller loads correctly", async () => {
-    const page = await browser.newPage();
-
-    page.emulate({
+    await page.emulate({
       viewport: {
         width: 500,
         height: 720,
       },
       userAgent: "",
     });
+  });
 
+  test("VirtualScroller loads correctly", async () => {
     await page.goto("http://localhost:3001");
 
     const html = await page.$eval("#root", e => e.innerHTML);
@@ -41,16 +22,6 @@ describe("e2e tests", async () => {
   });
 
   test("scrolls through the list", async () => {
-    const page = await browser.newPage();
-
-    page.emulate({
-      viewport: {
-        width: 500,
-        height: 720,
-      },
-      userAgent: "",
-    });
-
     await page.goto("http://localhost:3001");
 
     await page.$eval("#root", e => e.innerHTML);
@@ -68,21 +39,60 @@ describe("e2e tests", async () => {
         break;
       }
 
-      await page.evaluate(`
-        (async () => {
-          const timeout = new Promise((resolve, reject) => {
-            setTimeout(() => {
-              window.scrollBy(0, window.innerHeight);
-              resolve();
-            }, 100);
-          });
-
-          await timeout;
-        })();
-      `);
+      await scrollByInnerHeight(page);
     }
 
     const html = await page.$eval("#root", e => e.innerHTML);
     expect(html).toContain(`Item ${ITEMS_TO_GENERATE - 1}`);
   });
+
+  test("scroll restoration works", async () => {
+    await page.goto("http://localhost:3001");
+
+    await page.$eval("#root", e => e.innerHTML);
+
+    await scrollByInnerHeight(page);
+    await scrollByInnerHeight(page);
+    await scrollByInnerHeight(page);
+
+    const scrollBeforeUnmount = await getScrollY();
+    await toggleScroller();
+    await delay(100);
+
+    const scrollAfterUnmount = await getScrollY();
+    await toggleScroller();
+    await delay(100);
+
+    const scrollAfterMount = await getScrollY();
+
+    expect(scrollBeforeUnmount).toBe(scrollAfterMount);
+    expect(scrollAfterUnmount).toBe(0);
+
+    function getScrollY() {
+      return page.evaluate(() => window.scrollY);
+    }
+
+    async function toggleScroller() {
+      await page.$eval("#toggle-btn", (button: HTMLButtonElement) => button.click());
+    }
+  });
 });
+
+async function scrollByInnerHeight(page: Page) {
+  await page.evaluate(`
+    (async () => {
+      const timeout = new Promise((resolve, reject) => {
+        setTimeout(() => {
+          window.scrollBy(0, window.innerHeight);
+          resolve();
+        }, 100);
+      });
+
+      await timeout;
+    })();
+  `);
+}
+
+function delay(timeout: number) {
+  return new Promise(resolve => setTimeout(resolve, timeout));
+}

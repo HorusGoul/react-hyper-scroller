@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import * as React from "react";
 import { VirtualScroller } from "../src/react-hyper-scroller";
 import { render, cleanup, waitForElement, act } from "react-testing-library";
