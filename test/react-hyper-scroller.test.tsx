@@ -1,6 +1,9 @@
+/**
+ * @jest-environment jsdom
+ */
 import * as React from "react";
 import { VirtualScroller } from "../src/react-hyper-scroller";
-import { render, cleanup, waitForElement } from "react-testing-library";
+import { render, cleanup, waitForElement, act } from "react-testing-library";
 
 interface ListItem {
   id: number;
@@ -73,7 +76,9 @@ describe("VirtualScroller", () => {
     let y = 0;
 
     for (const item of items) {
-      window.scrollTo(0, y);
+      act(() => {
+        window.scrollTo(0, y);
+      });
 
       const itemElement = await waitForElement(() => getByTestId(`item-${item.id}`));
       expect(itemElement).toBeTruthy();

@@ -53,10 +53,10 @@
     }
   },
   "jest": {
+    "preset": "jest-puppeteer",
     "transform": {
       ".(ts|tsx)": "ts-jest"
     },
-    "testEnvironment": "jsdom",
     "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
     "moduleFileExtensions": [
       "ts",
@@ -97,11 +97,13 @@
     "@semantic-release/commit-analyzer": "^6.1.0",
     "@semantic-release/git": "^7.0.5",
     "@semantic-release/release-notes-generator": "^7.1.1",
+    "@types/expect-puppeteer": "^3.3.1",
     "@types/jest": "^23.3.2",
+    "@types/jest-environment-puppeteer": "^4.0.0",
     "@types/node": "^10.11.0",
-    "@types/puppeteer": "^1.12.1",
-    "@types/react": "^16.4.18",
-    "@types/react-dom": "^16.0.9",
+    "@types/puppeteer": "^1.12.3",
+    "@types/react": "^16.8.10",
+    "@types/react-dom": "^16.8.3",
     "colors": "^1.3.2",
     "commitizen": "^3.0.7",
     "coveralls": "^3.0.2",
@@ -110,13 +112,15 @@
     "husky": "^1.0.1",
     "jest": "^24.1.0",
     "jest-config": "^24.1.0",
+    "jest-puppeteer": "^4.1.0",
     "lint-staged": "^7.3.0",
     "lodash.camelcase": "^4.3.0",
     "prettier": "^1.14.3",
     "prompt": "^1.0.0",
     "puppeteer": "^1.12.2",
-    "react": "^16.8.3",
-    "react-dom": "^16.8.3",
+    "puppeteer-to-istanbul": "^1.2.2",
+    "react": "^16.8.5",
+    "react-dom": "^16.8.5",
     "react-testing-library": "^6.0.0",
     "replace-in-file": "^3.4.2",
     "rimraf": "^2.6.2",
@@ -137,8 +141,8 @@
     "typescript": "^3.0.3"
   },
   "peerDependencies": {
-    "react": "^15.0.0 || ^16.0.0",
-    "react-dom": "^15.0.0 || ^16.0.0"
+    "react": "^16.8.0",
+    "react-dom": "^16.8.0"
   },
   "dependencies": {}
 }

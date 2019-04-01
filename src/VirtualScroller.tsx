@@ -1,4 +1,4 @@
-import * as React from "react";
+import React, { useEffect, useState, useCallback, useRef, memo, FC, useLayoutEffect } from "react";
 import { findDOMNode } from "react-dom";
 import VirtualScrollerCacheService from "./VirtualScrollerCacheService";
 
@@ -64,6 +64,17 @@ export interface IVirtualScrollerProps {
    * @defaultValue `window`
    */
   targetView?: VirtualScrollerTargetView;
+
+  /**
+   * Allows telling the component whether you want it to
+   * restore the scroll or not.
+   *
+   * Scroll restoration depends on the `cacheKey` as it
+   * will retrieve the latest scroll position from the cache.
+   *
+   * @defaultValue false
+   */
+  scrollRestoration?: boolean;
 }
 
 interface IVirtualScrollerState {
@@ -79,263 +90,279 @@ const defaultVirtualScrollerState = {
   paddingBottom: 0,
   paddingTop: 0,
 };
-export class VirtualScroller extends React.Component<IVirtualScrollerProps, IVirtualScrollerState> {
-  public static defaultProps: IVirtualScrollerProps = {
-    cacheKey: VirtualScrollerCacheService.getNextId(),
-    defaultRowHeight: 0,
-    overscanRowCount: 2,
-    rowCount: 0,
-    rowRenderer: () => null,
-    initialScrollPosition: 0,
-    targetView: window,
-  };
 
-  public state: IVirtualScrollerState = defaultVirtualScrollerState;
+function isWindow(targetView: VirtualScrollerTargetView) {
+  return window === targetView;
+}
 
-  private listDiv: HTMLDivElement;
-  private rowRefs: { [key: number]: IVirtualScrollerRowRef } = {};
+function scrollTo(targetView: VirtualScrollerTargetView, x: number, y: number) {
+  window.requestAnimationFrame(() => {
+    targetView.scrollTo(x, y);
+  });
+}
 
-  public componentDidMount() {
-    if (this.props.targetView) {
-      this.addEventListeners();
-      this.updateProjection();
-      this.restoreScroll();
-    }
-  }
+const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
+  targetView,
+  initialScrollPosition,
+  cacheKey,
+  rowCount,
+  overscanRowCount,
+  defaultRowHeight,
+  rowRenderer,
+  scrollRestoration,
+}) => {
+  const [state, setState] = useState<IVirtualScrollerState>(() => ({
+    ...defaultVirtualScrollerState,
+  }));
+  const cache = VirtualScrollerCacheService.getCache(cacheKey);
+  const listDivRef = useRef<HTMLDivElement>(null);
+  const rowRefs = useRef<{ [key: number]: IVirtualScrollerRowRef }>({});
 
-  public componentWillUnmount() {
-    if (this.props.targetView) {
-      this.removeEventListeners();
-      this.saveScrollPosition();
-    }
-  }
+  const scrollToInitialPosition = useCallback(
+    () => {
+      scrollTo(targetView, 0, initialScrollPosition);
+    },
+    [targetView, initialScrollPosition],
+  );
 
-  public componentDidUpdate(prevProps: IVirtualScrollerProps) {
-    if (this.props !== prevProps) {
-      if (prevProps.targetView !== this.props.targetView) {
-        if (prevProps.targetView !== null) {
-          this.removeEventListeners(prevProps.targetView);
+  const restoreScroll = useCallback(
+    () => {
+      scrollTo(targetView, 0, cache.scrollPosition);
+    },
+    [targetView, cache.scrollPosition],
+  );
+
+  const getScrollPosition = useCallback(
+    () => {
+      const y = isWindow(targetView)
+        ? (targetView as Window).scrollY
+        : (targetView as Element).scrollTop;
+
+      return y < initialScrollPosition ? initialScrollPosition : y;
+    },
+    [targetView, initialScrollPosition],
+  );
+
+  const saveScrollPosition = useCallback(
+    () => {
+      cache.scrollPosition = getScrollPosition();
+    },
+    [cache, getScrollPosition],
+  );
+
+  const calculateRowHeight = useCallback(
+    (index: number) => {
+      const height = cache[index];
+      const hasRef = !!rowRefs.current[index];
+
+      if (hasRef) {
+        window.requestAnimationFrame(() => {
+          const ref = rowRefs.current[index];
+
+          if (ref && ref.DOMNode) {
+            cache[index] = (ref.DOMNode as Element).getBoundingClientRect().height;
+          }
+        });
+      }
+
+      return height || defaultRowHeight;
+    },
+    [cache, defaultRowHeight],
+  );
+
+  const updateProjection = useCallback(
+    () => {
+      if (!rowCount) {
+        return;
+      }
+
+      const listDiv = listDivRef.current;
+
+      const viewport = isWindow(targetView)
+        ? {
+            height: (targetView as Window).innerHeight,
+            scrollY: (targetView as Window).scrollY - listDiv.offsetTop,
+          }
+        : {
+            height: (targetView as Element).clientHeight,
+            scrollY: (targetView as Element).scrollTop - listDiv.offsetTop,
+          };
+
+      if (viewport.scrollY < 0) {
+        viewport.scrollY = 0;
+      }
+
+      const visibleItemsMaxTop = viewport.scrollY + viewport.height;
+      let visibleItemsHeight = 0;
+      let itemsHeightSum = 0;
+      let firstIndex: number;
+      let lastIndex: number;
+      let paddingTop = 0;
+      let paddingBottom = 0;
+
+      for (let i = 0; i < rowCount; i++) {
+        const prevSum = itemsHeightSum;
+        itemsHeightSum += calculateRowHeight(i);
+
+        if (itemsHeightSum >= viewport.scrollY && isNaN(firstIndex)) {
+          paddingTop = prevSum;
+          firstIndex = i - overscanRowCount;
+
+          if (firstIndex < 0) {
+            firstIndex = 0;
+          }
+
+          for (let j = firstIndex; j < i; j++) {
+            paddingTop -= calculateRowHeight(j);
+          }
         }
 
-        if (this.props.targetView) {
-          this.addEventListeners();
+        if (
+          (itemsHeightSum >= visibleItemsMaxTop && !lastIndex) ||
+          (i === rowCount - 1 && !lastIndex)
+        ) {
+          lastIndex = i + overscanRowCount;
+          visibleItemsHeight = itemsHeightSum;
+
+          if (lastIndex >= rowCount) {
+            lastIndex = rowCount - 1;
+          }
+
+          for (let j = lastIndex; j > i; j--) {
+            visibleItemsHeight += calculateRowHeight(j);
+          }
         }
       }
 
-      if (this.props.targetView) {
-        if (prevProps.cacheKey !== this.props.cacheKey) {
-          this.saveScrollPosition(prevProps.cacheKey);
-          this.setState(
-            {
-              ...defaultVirtualScrollerState,
-            },
-            () => this.restoreScroll(),
-          );
-        }
+      paddingBottom = itemsHeightSum - visibleItemsHeight;
 
-        this.updateProjection();
-      }
-    }
-  }
-
-  public render() {
-    const { rowRenderer, rowCount } = this.props;
-    const { firstIndex, lastIndex, paddingBottom, paddingTop } = this.state;
-
-    const projection = [];
-
-    if (rowCount) {
-      for (let i = firstIndex; i <= lastIndex; i++) {
-        projection[projection.length] = rowRenderer(
-          i,
-          this.createRowRefListener(i),
-          this.createItemUpdateListener(i),
-        );
-      }
-    }
-
-    return (
-      <div
-        ref={ref => (this.listDiv = ref)}
-        style={{
-          paddingBottom,
-          paddingTop,
-        }}
-      >
-        {projection}
-      </div>
-    );
-  }
-
-  private onResizeListener = (e: Event) => this.onResize(e);
-  private onScrollListener = (e: Event) => this.onScroll(e);
-
-  private addEventListeners(targetView: VirtualScrollerTargetView = this.props.targetView) {
-    window.addEventListener("resize", this.onResizeListener, false);
-    targetView.addEventListener("scroll", this.onScrollListener, false);
-  }
-
-  private removeEventListeners(targetView: VirtualScrollerTargetView = this.props.targetView) {
-    window.removeEventListener("resize", this.onResizeListener);
-    targetView.removeEventListener("scroll", this.onScrollListener);
-  }
-
-  private updateProjection(props: IVirtualScrollerProps = this.props) {
-    const { rowCount, overscanRowCount, targetView } = props;
-
-    if (!rowCount) {
-      return;
-    }
-
-    const viewport = this.targetViewIsWindow()
-      ? {
-          height: (targetView as Window).innerHeight,
-          scrollY: (targetView as Window).scrollY - this.listDiv.offsetTop,
-        }
-      : {
-          height: (targetView as Element).clientHeight,
-          scrollY: (targetView as Element).scrollTop - this.listDiv.offsetTop,
-        };
-
-    if (viewport.scrollY < 0) {
-      viewport.scrollY = 0;
-    }
-
-    const visibleItemsMaxTop = viewport.scrollY + viewport.height;
-    let visibleItemsHeight = 0;
-    let itemsHeightSum = 0;
-    let firstIndex;
-    let lastIndex;
-    let paddingTop = 0;
-    let paddingBottom = 0;
-
-    for (let i = 0; i < rowCount; i++) {
-      const prevSum = itemsHeightSum;
-      itemsHeightSum += this.calculateRowHeight(i);
-
-      if (itemsHeightSum >= viewport.scrollY && isNaN(firstIndex)) {
-        paddingTop = prevSum;
-        firstIndex = i - overscanRowCount;
-
-        if (firstIndex < 0) {
-          firstIndex = 0;
-        }
-
-        for (let j = firstIndex; j < i; j++) {
-          paddingTop -= this.calculateRowHeight(j);
-        }
+      if (paddingBottom < 0) {
+        paddingBottom = 0;
       }
 
-      if (
-        (itemsHeightSum >= visibleItemsMaxTop && !lastIndex) ||
-        (i === rowCount - 1 && !lastIndex)
-      ) {
-        lastIndex = i + overscanRowCount;
-        visibleItemsHeight = itemsHeightSum;
+      setState(currentState => ({
+        ...currentState,
+        firstIndex,
+        lastIndex,
+        paddingBottom,
+        paddingTop,
+      }));
+    },
+    [calculateRowHeight, overscanRowCount, rowCount, targetView],
+  );
 
-        if (lastIndex >= rowCount) {
-          lastIndex = rowCount - 1;
-        }
-
-        for (let j = lastIndex; j > i; j--) {
-          visibleItemsHeight += this.calculateRowHeight(j);
-        }
+  useEffect(
+    () => {
+      if (!targetView) {
+        return;
       }
-    }
 
-    paddingBottom = itemsHeightSum - visibleItemsHeight;
+      function onResizeListener() {
+        updateProjection();
+      }
 
-    if (paddingBottom < 0) {
-      paddingBottom = 0;
-    }
+      function onScrollListener() {
+        updateProjection();
+      }
 
-    this.setState({
-      firstIndex,
-      lastIndex,
-      paddingBottom,
-      paddingTop,
-    });
+      window.addEventListener("resize", onResizeListener);
+      targetView.addEventListener("scroll", onScrollListener);
+
+      return () => {
+        window.removeEventListener("resize", onResizeListener);
+        targetView.removeEventListener("scroll", onScrollListener);
+      };
+    },
+    [targetView, updateProjection],
+  );
+
+  useLayoutEffect(
+    () => {
+      if (!targetView) {
+        return;
+      }
+
+      setState({ ...defaultVirtualScrollerState });
+
+      if (scrollRestoration) {
+        restoreScroll();
+      } else {
+        scrollToInitialPosition();
+      }
+
+      updateProjection();
+
+      return () => {
+        saveScrollPosition();
+      };
+    },
+    [cacheKey, targetView],
+  );
+
+  useLayoutEffect(
+    () => {
+      if (!targetView) {
+        return;
+      }
+
+      updateProjection();
+    },
+    [updateProjection, targetView],
+  );
+
+  function createRowRefListener(index: number) {
+    return (ref: React.ReactInstance) => setRowRef(index, ref);
   }
 
-  private createRowRefListener(index: number) {
-    return (ref: React.ReactInstance) => this.setRowRef(index, ref);
-  }
-
-  private setRowRef(index: number, ref: React.ReactInstance) {
+  function setRowRef(index: number, ref: React.ReactInstance) {
     if (!ref) {
-      this.rowRefs[index] = null;
+      rowRefs.current[index] = null;
       return;
     }
 
-    this.rowRefs[index] = {
+    rowRefs.current[index] = {
       ref,
       DOMNode: findDOMNode(ref),
     };
   }
 
-  private calculateRowHeight(index: number) {
-    const { cacheKey, defaultRowHeight } = this.props;
-    const cache = VirtualScrollerCacheService.getCache(cacheKey);
-    const height = cache[index];
-    const hasRef = !!this.rowRefs[index];
-
-    if (hasRef) {
-      window.requestAnimationFrame(() => {
-        // Request ref again just in case it has been removed.
-        const ref = this.rowRefs[index];
-
-        if (ref && ref.DOMNode) {
-          cache[index] = (ref.DOMNode as Element).getBoundingClientRect().height;
-        }
-      });
-    }
-
-    return height || defaultRowHeight;
-  }
-
-  private onScroll(_e: Event) {
-    this.updateProjection();
-  }
-
-  private onResize(_e: Event) {
-    this.updateProjection();
-  }
-
-  private saveScrollPosition(cacheKey: string = this.props.cacheKey) {
-    const cache = VirtualScrollerCacheService.getCache(cacheKey);
-    cache.scrollPosition = this.getScrollPosition();
-  }
-
-  private restoreScroll() {
-    const { targetView, cacheKey, initialScrollPosition } = this.props;
-    const cache = VirtualScrollerCacheService.getCache(cacheKey);
-    const scrollPosition = cache.scrollPosition || initialScrollPosition;
-
-    window.requestAnimationFrame(() => targetView.scrollTo(0, scrollPosition));
-  }
-
-  private getScrollPosition() {
-    const { initialScrollPosition, targetView } = this.props;
-    const y = this.targetViewIsWindow()
-      ? (targetView as Window).scrollY
-      : (targetView as Element).scrollTop;
-
-    return y < initialScrollPosition ? initialScrollPosition : y;
-  }
-
-  private createItemUpdateListener(index: number) {
-    return () => this.onItemUpdate(index);
-  }
-
-  private onItemUpdate(_index: number): void {
-    const { targetView } = this.props;
-
+  function onItemUpdate(index: number) {
     if (targetView) {
-      this.updateProjection();
+      updateProjection();
     }
   }
 
-  private targetViewIsWindow() {
-    return window === this.props.targetView;
+  const projection = [];
+
+  if (rowCount && state.lastIndex - state.firstIndex > 0) {
+    for (let i = state.firstIndex; i <= state.lastIndex; i++) {
+      projection[projection.length] = rowRenderer(i, createRowRefListener(i), () =>
+        onItemUpdate(i),
+      );
+    }
   }
-}
+
+  return (
+    <div
+      ref={listDivRef}
+      style={{
+        paddingBottom: state.paddingBottom,
+        paddingTop: state.paddingTop,
+      }}
+    >
+      {projection}
+    </div>
+  );
+};
+
+VirtualScrollerHooks.defaultProps = {
+  targetView: window,
+  initialScrollPosition: 0,
+  cacheKey: VirtualScrollerCacheService.getNextId(),
+  rowCount: 0,
+  overscanRowCount: 2,
+  defaultRowHeight: 0,
+  scrollRestoration: false,
+};
+
+export const VirtualScroller = memo(VirtualScrollerHooks);

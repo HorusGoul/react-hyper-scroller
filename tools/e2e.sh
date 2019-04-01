@@ -8,7 +8,7 @@ killAppServer
 
 cd e2e/test-app
 
-npm ci
+rm -rf node_modules && npm install
 npm run start &
 
 cd ../../

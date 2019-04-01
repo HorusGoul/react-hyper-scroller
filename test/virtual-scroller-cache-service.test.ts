@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import { VirtualScrollerCacheService } from "../src/VirtualScrollerCacheService";
 
 describe("VirtualScrollerCacheService", () => {
