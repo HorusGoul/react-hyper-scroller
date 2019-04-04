@@ -1,4 +1,13 @@
-import React, { useEffect, useState, useCallback, useRef, memo, FC, useLayoutEffect } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  memo,
+  FC,
+  useLayoutEffect,
+  useMemo,
+} from "react";
 import { findDOMNode } from "react-dom";
 import VirtualScrollerCacheService from "./VirtualScrollerCacheService";
 
@@ -332,26 +341,31 @@ const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
     }
   }
 
-  const projection = [];
+  return useMemo(
+    () => {
+      const projection = [];
 
-  if (rowCount && state.lastIndex - state.firstIndex > 0) {
-    for (let i = state.firstIndex; i <= state.lastIndex; i++) {
-      projection[projection.length] = rowRenderer(i, createRowRefListener(i), () =>
-        onItemUpdate(i),
+      if (rowCount && state.lastIndex - state.firstIndex > 0) {
+        for (let i = state.firstIndex; i <= state.lastIndex; i++) {
+          projection[projection.length] = rowRenderer(i, createRowRefListener(i), () =>
+            onItemUpdate(i),
+          );
+        }
+      }
+
+      return (
+        <div
+          ref={listDivRef}
+          style={{
+            paddingBottom: state.paddingBottom,
+            paddingTop: state.paddingTop,
+          }}
+        >
+          {projection}
+        </div>
       );
-    }
-  }
-
-  return (
-    <div
-      ref={listDivRef}
-      style={{
-        paddingBottom: state.paddingBottom,
-        paddingTop: state.paddingTop,
-      }}
-    >
-      {projection}
-    </div>
+    },
+    [state],
   );
 };
 
