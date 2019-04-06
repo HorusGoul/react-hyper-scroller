@@ -345,7 +345,7 @@ const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
     () => {
       const projection = [];
 
-      if (rowCount && state.lastIndex - state.firstIndex > 0) {
+      if (rowCount) {
         for (let i = state.firstIndex; i <= state.lastIndex; i++) {
           projection[projection.length] = rowRenderer(i, createRowRefListener(i), () =>
             onItemUpdate(i),
