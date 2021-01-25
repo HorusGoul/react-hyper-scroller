@@ -4,20 +4,12 @@ import React, {
   useCallback,
   useRef,
   memo,
-  FC,
   useLayoutEffect,
   useMemo,
 } from "react";
-import { findDOMNode } from "react-dom";
 import VirtualScrollerCacheService from "./VirtualScrollerCacheService";
 
-export type VirtualScrollerTargetView = Element | Window;
-
-interface IVirtualScrollerRowRef {
-  ref: React.ReactInstance;
-  DOMNode: Element | Text;
-}
-
+export type VirtualScrollerTargetView = React.RefObject<HTMLElement> | Window;
 export interface IVirtualScrollerProps {
   /**
    * Max number of rows / items.
@@ -28,20 +20,20 @@ export interface IVirtualScrollerProps {
    * Estimated height that will be used on initial
    * render for each item.
    */
-  defaultRowHeight: number;
+  estimatedRowHeight: number;
 
   /**
    * Function that will be called when rendering an item.
    *
    * @param index Item's index.
-   * @param rowRef Ref that should be attached to each item's root.
+   * @param ref Ref that should be attached to each item's root.
    * @param onItemUpdate Method that will trigger an update projection. This should be called
    *                     when the item changes its size. (e.g. The item has a button which
    *                     expands item's height showing new content).
    */
   rowRenderer(
     index: number,
-    rowRef: (rowRef: React.ReactInstance) => void,
+    ref: React.RefObject<HTMLElement>,
     onItemUpdate: () => void,
   ): React.ReactNode;
 
@@ -100,32 +92,49 @@ const defaultVirtualScrollerState = {
   paddingTop: 0,
 };
 
-function isWindow(targetView: VirtualScrollerTargetView) {
+function isWindow(targetView: VirtualScrollerTargetView): targetView is Window {
   return window === targetView;
+}
+
+function isHTMLElement(view: HTMLElement | Window): view is HTMLElement {
+  return window !== view;
 }
 
 function scrollTo(targetView: VirtualScrollerTargetView, x: number, y: number) {
   window.requestAnimationFrame(() => {
-    targetView.scrollTo(x, y);
+    const view = isWindow(targetView) ? targetView : targetView.current;
+
+    view?.scrollTo(x, y);
   });
 }
 
-const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
-  targetView,
-  initialScrollPosition,
+export function VirtualScrollerHooks({
+  targetView = window,
+  initialScrollPosition = 0,
   cacheKey,
-  rowCount,
-  overscanRowCount,
-  defaultRowHeight,
+  rowCount = 0,
+  overscanRowCount = 2,
+  estimatedRowHeight = 0,
+  scrollRestoration = false,
   rowRenderer,
-  scrollRestoration,
-}) => {
+}: IVirtualScrollerProps) {
+  const [internalCacheKey, setInternalCacheKey] = useState(() => cacheKey ?? VirtualScrollerCacheService.getNextId())
   const [state, setState] = useState<IVirtualScrollerState>(() => ({
     ...defaultVirtualScrollerState,
   }));
-  const cache = VirtualScrollerCacheService.getCache(cacheKey);
+  const cache = VirtualScrollerCacheService.getCache(internalCacheKey);
   const listDivRef = useRef<HTMLDivElement>(null);
-  const rowRefs = useRef<{ [key: number]: IVirtualScrollerRowRef }>({});
+  const rowRefs = useRef<Record<number, React.RefObject<HTMLElement>>>({});
+
+  useEffect(() => {
+    let key = cacheKey;
+
+    if (!key) {
+      key = VirtualScrollerCacheService.getNextId()
+    }
+
+    setInternalCacheKey(key);
+  }, [cacheKey])
 
   const scrollToInitialPosition = useCallback(
     () => {
@@ -144,8 +153,8 @@ const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
   const getScrollPosition = useCallback(
     () => {
       const y = isWindow(targetView)
-        ? (targetView as Window).scrollY
-        : (targetView as Element).scrollTop;
+        ? targetView.scrollY
+        : targetView.current?.scrollTop;
 
       return y < initialScrollPosition ? initialScrollPosition : y;
     },
@@ -168,15 +177,15 @@ const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
         window.requestAnimationFrame(() => {
           const ref = rowRefs.current[index];
 
-          if (ref && ref.DOMNode) {
-            cache[index] = (ref.DOMNode as Element).getBoundingClientRect().height;
+          if (ref?.current) {
+            cache[index] = ref.current.getBoundingClientRect().height;
           }
         });
       }
 
-      return height || defaultRowHeight;
+      return height || estimatedRowHeight;
     },
-    [cache, defaultRowHeight],
+    [cache, estimatedRowHeight],
   );
 
   const updateProjection = useCallback(
@@ -187,14 +196,20 @@ const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
 
       const listDiv = listDivRef.current;
 
-      const viewport = isWindow(targetView)
+      const view = isWindow(targetView) ? targetView : targetView.current;
+
+      if (!view) {
+        return;
+      }
+
+      const viewport = isHTMLElement(view)
         ? {
-            height: (targetView as Window).innerHeight,
-            scrollY: (targetView as Window).scrollY - listDiv.offsetTop,
-          }
+          height: view.clientHeight,
+          scrollY: view.scrollTop - listDiv.offsetTop,
+        }
         : {
-            height: (targetView as Element).clientHeight,
-            scrollY: (targetView as Element).scrollTop - listDiv.offsetTop,
+            height: view.innerHeight,
+            scrollY: view.scrollY - listDiv.offsetTop,
           };
 
       if (viewport.scrollY < 0) {
@@ -260,9 +275,12 @@ const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
     [calculateRowHeight, overscanRowCount, rowCount, targetView],
   );
 
+  // Update projection on resize or scroll events
   useEffect(
     () => {
-      if (!targetView) {
+      const view = isWindow(targetView) ? window : targetView?.current;
+
+      if (!view) {
         return;
       }
 
@@ -275,11 +293,11 @@ const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
       }
 
       window.addEventListener("resize", onResizeListener);
-      targetView.addEventListener("scroll", onScrollListener);
+      view.addEventListener("scroll", onScrollListener);
 
       return () => {
         window.removeEventListener("resize", onResizeListener);
-        targetView.removeEventListener("scroll", onScrollListener);
+        view.removeEventListener("scroll", onScrollListener);
       };
     },
     [targetView, updateProjection],
@@ -305,7 +323,7 @@ const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
         saveScrollPosition();
       };
     },
-    [cacheKey, targetView],
+    [internalCacheKey, targetView],
   );
 
   useLayoutEffect(
@@ -319,20 +337,10 @@ const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
     [updateProjection, targetView],
   );
 
-  function createRowRefListener(index: number) {
-    return (ref: React.ReactInstance) => setRowRef(index, ref);
-  }
-
-  function setRowRef(index: number, ref: React.ReactInstance) {
-    if (!ref) {
-      rowRefs.current[index] = null;
-      return;
-    }
-
-    rowRefs.current[index] = {
-      ref,
-      DOMNode: findDOMNode(ref),
-    };
+  function createRowRef(index: number) {
+    const ref = React.createRef<HTMLElement>()
+    rowRefs.current[index] = ref
+    return ref
   }
 
   function onItemUpdate(index: number) {
@@ -347,7 +355,7 @@ const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
 
       if (rowCount) {
         for (let i = state.firstIndex; i <= state.lastIndex; i++) {
-          projection[projection.length] = rowRenderer(i, createRowRefListener(i), () =>
+          projection[projection.length] = rowRenderer(i, createRowRef(i), () =>
             onItemUpdate(i),
           );
         }
@@ -367,16 +375,6 @@ const VirtualScrollerHooks: FC<IVirtualScrollerProps> = ({
     },
     [state],
   );
-};
-
-VirtualScrollerHooks.defaultProps = {
-  targetView: window,
-  initialScrollPosition: 0,
-  cacheKey: VirtualScrollerCacheService.getNextId(),
-  rowCount: 0,
-  overscanRowCount: 2,
-  defaultRowHeight: 0,
-  scrollRestoration: false,
-};
+}
 
 export const VirtualScroller = memo(VirtualScrollerHooks);

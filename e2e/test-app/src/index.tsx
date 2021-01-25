@@ -22,7 +22,7 @@ function App() {
       {showing && (
         <VirtualScroller
           rowCount={items.length}
-          defaultRowHeight={PRECALCULATED_ITEM_HEIGHT}
+          estimatedRowHeight={PRECALCULATED_ITEM_HEIGHT}
           rowRenderer={rowRenderer}
           targetView={window}
           scrollRestoration={true}
