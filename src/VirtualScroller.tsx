@@ -10,32 +10,17 @@ import React, {
 import VirtualScrollerCacheService from "./VirtualScrollerCacheService";
 
 export type VirtualScrollerTargetView = React.RefObject<HTMLElement> | Window;
-export interface VirtualScrollerProps {
+export interface UseVirtualScrollerProps {
   /**
-   * Max number of rows / items.
+   * Max number of items.
    */
-  rowCount: number;
+  itemCount: number;
 
   /**
    * Estimated height that will be used on initial
    * render for each item.
    */
-  estimatedRowHeight: number;
-
-  /**
-   * Function that will be called when rendering an item.
-   *
-   * @param index Item's index.
-   * @param ref Ref that should be attached to each item's root.
-   * @param onItemUpdate Method that will trigger an update projection. This should be called
-   *                     when the item changes its size. (e.g. The item has a button which
-   *                     expands item's height showing new content).
-   */
-  rowRenderer(
-    index: number,
-    ref: React.RefObject<HTMLElement>,
-    onItemUpdate: () => void,
-  ): React.ReactNode;
+  estimatedItemHeight: number;
 
   /**
    * Cache key on VirtualScrollerCacheService.
@@ -45,12 +30,12 @@ export interface VirtualScrollerProps {
   cacheKey?: string;
 
   /**
-   * Number of rows that will be rendered before and after the
+   * Number of items that will be rendered before and after the
    * ones that are shown in the viewport.
    *
    * @defaultValue 2
    */
-  overscanRowCount?: number;
+  overscanItemCount?: number;
 
   /**
    * Initial scroll position.
@@ -113,12 +98,11 @@ export function useVirtualScroller(
     targetView = window,
     initialScrollPosition = 0,
     cacheKey,
-    rowCount = 0,
-    overscanRowCount = 2,
-    estimatedRowHeight = 0,
-    scrollRestoration = false,
-    rowRenderer
-  }: VirtualScrollerProps
+    itemCount = 0,
+    overscanItemCount = 2,
+    estimatedItemHeight = 0,
+    scrollRestoration = false
+  }: UseVirtualScrollerProps
 ) {
 
   const [internalCacheKey, setInternalCacheKey] = useState(() => cacheKey ?? VirtualScrollerCacheService.getNextId())
@@ -186,18 +170,22 @@ export function useVirtualScroller(
         });
       }
 
-      return height || estimatedRowHeight;
+      return height || estimatedItemHeight;
     },
-    [cache, estimatedRowHeight],
+    [cache, estimatedItemHeight],
   );
 
   const updateProjection = useCallback(
     () => {
-      if (!rowCount) {
+      if (!itemCount) {
         return;
       }
 
       const listDiv = scrollerRef.current;
+
+      if (!listDiv) {
+        return;
+      }
 
       const view = isWindow(targetView) ? targetView : targetView.current;
 
@@ -227,13 +215,13 @@ export function useVirtualScroller(
       let paddingTop = 0;
       let paddingBottom = 0;
 
-      for (let i = 0; i < rowCount; i++) {
+      for (let i = 0; i < itemCount; i++) {
         const prevSum = itemsHeightSum;
         itemsHeightSum += calculateRowHeight(i);
 
         if (itemsHeightSum >= viewport.scrollY && isNaN(firstIndex)) {
           paddingTop = prevSum;
-          firstIndex = i - overscanRowCount;
+          firstIndex = i - overscanItemCount;
 
           if (firstIndex < 0) {
             firstIndex = 0;
@@ -246,13 +234,13 @@ export function useVirtualScroller(
 
         if (
           (itemsHeightSum >= visibleItemsMaxTop && !lastIndex) ||
-          (i === rowCount - 1 && !lastIndex)
+          (i === itemCount - 1 && !lastIndex)
         ) {
-          lastIndex = i + overscanRowCount;
+          lastIndex = i + overscanItemCount;
           visibleItemsHeight = itemsHeightSum;
 
-          if (lastIndex >= rowCount) {
-            lastIndex = rowCount - 1;
+          if (lastIndex >= itemCount) {
+            lastIndex = itemCount - 1;
           }
 
           for (let j = lastIndex; j > i; j--) {
@@ -275,7 +263,7 @@ export function useVirtualScroller(
         paddingTop,
       }));
     },
-    [calculateRowHeight, overscanRowCount, rowCount, targetView],
+    [calculateRowHeight, overscanItemCount, itemCount, targetView],
   );
 
   // Update projection on resize or scroll events
@@ -367,28 +355,45 @@ export function useVirtualScroller(
     onItemUpdate,
 
     // Props
-    rowCount,
-    rowRenderer,
+    itemCount,
   }
 }
 
 export type UseVirtualScrollerResult = ReturnType<typeof useVirtualScroller>;
 
+export interface VirtualScrollerProps extends UseVirtualScrollerResult {
+
+  /**
+   * Function that will be called when rendering an item.
+   *
+   * @param index Item's index.
+   * @param ref Ref that should be attached to each item's root.
+   * @param onItemUpdate Method that will trigger an update projection. This should be called
+   *                     when the item changes its size. (e.g. The item has a button which
+   *                     expands item's height showing new content).
+   */
+  itemRenderer(
+    index: number,
+    ref: React.RefObject<HTMLElement>,
+    onItemUpdate: () => void,
+  ): React.ReactNode;
+}
+
 function VirtualScrollerHooks({
   state,
-  rowCount,
-  rowRenderer,
+  itemCount,
+  itemRenderer,
   scrollerRef,
   createItemRef,
   onItemUpdate
-}: UseVirtualScrollerResult) {
+}: VirtualScrollerProps) {
   return useMemo(
     () => {
       const projection = [];
 
-      if (rowCount) {
+      if (itemCount) {
         for (let i = state.firstIndex; i <= state.lastIndex; i++) {
-          projection[projection.length] = rowRenderer(i, createItemRef(i), () =>
+          projection[projection.length] = itemRenderer(i, createItemRef(i), () =>
             onItemUpdate(i),
           );
         }

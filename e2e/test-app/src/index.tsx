@@ -14,9 +14,8 @@ function App() {
   }
 
   const scroller = useVirtualScroller({
-    rowCount: items.length,
-    estimatedRowHeight: PRECALCULATED_ITEM_HEIGHT,
-    rowRenderer,
+    itemCount: items.length,
+    estimatedItemHeight: PRECALCULATED_ITEM_HEIGHT,
     targetView: window,
     scrollRestoration: true,
     cacheKey: "test-scroller",
@@ -28,7 +27,7 @@ function App() {
         Show/Hide scroller
       </button>
 
-      {showing && <VirtualScroller {...scroller} />}
+      {showing && <VirtualScroller {...scroller} itemRenderer={rowRenderer} />}
     </>
   );
 }
