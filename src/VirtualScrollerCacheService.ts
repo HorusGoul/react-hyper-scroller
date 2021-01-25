@@ -1,9 +1,9 @@
-interface IVirtualScrollerCache {
+export interface IVirtualScrollerCache {
   scrollPosition: number;
   [index: number]: number;
 }
 
-interface IVirtualScrollerCacheList {
+export interface IVirtualScrollerCacheList {
   [key: string]: IVirtualScrollerCache;
 }
 

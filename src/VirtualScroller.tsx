@@ -10,7 +10,7 @@ import React, {
 import VirtualScrollerCacheService from "./VirtualScrollerCacheService";
 
 export type VirtualScrollerTargetView = React.RefObject<HTMLElement> | Window;
-export interface IVirtualScrollerProps {
+export interface VirtualScrollerProps {
   /**
    * Max number of rows / items.
    */
@@ -108,23 +108,26 @@ function scrollTo(targetView: VirtualScrollerTargetView, x: number, y: number) {
   });
 }
 
-export function VirtualScrollerHooks({
-  targetView = window,
-  initialScrollPosition = 0,
-  cacheKey,
-  rowCount = 0,
-  overscanRowCount = 2,
-  estimatedRowHeight = 0,
-  scrollRestoration = false,
-  rowRenderer,
-}: IVirtualScrollerProps) {
+export function useVirtualScroller(
+  {
+    targetView = window,
+    initialScrollPosition = 0,
+    cacheKey,
+    rowCount = 0,
+    overscanRowCount = 2,
+    estimatedRowHeight = 0,
+    scrollRestoration = false,
+    rowRenderer
+  }: VirtualScrollerProps
+) {
+
   const [internalCacheKey, setInternalCacheKey] = useState(() => cacheKey ?? VirtualScrollerCacheService.getNextId())
   const [state, setState] = useState<IVirtualScrollerState>(() => ({
     ...defaultVirtualScrollerState,
   }));
   const cache = VirtualScrollerCacheService.getCache(internalCacheKey);
-  const listDivRef = useRef<HTMLDivElement>(null);
-  const rowRefs = useRef<Record<number, React.RefObject<HTMLElement>>>({});
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const itemsRefs = useRef<Record<number, React.RefObject<HTMLElement>>>({});
 
   useEffect(() => {
     let key = cacheKey;
@@ -171,11 +174,11 @@ export function VirtualScrollerHooks({
   const calculateRowHeight = useCallback(
     (index: number) => {
       const height = cache[index];
-      const hasRef = !!rowRefs.current[index];
+      const hasRef = !!itemsRefs.current[index];
 
       if (hasRef) {
         window.requestAnimationFrame(() => {
-          const ref = rowRefs.current[index];
+          const ref = itemsRefs.current[index];
 
           if (ref?.current) {
             cache[index] = ref.current.getBoundingClientRect().height;
@@ -194,7 +197,7 @@ export function VirtualScrollerHooks({
         return;
       }
 
-      const listDiv = listDivRef.current;
+      const listDiv = scrollerRef.current;
 
       const view = isWindow(targetView) ? targetView : targetView.current;
 
@@ -337,25 +340,55 @@ export function VirtualScrollerHooks({
     [updateProjection, targetView],
   );
 
-  function createRowRef(index: number) {
+  const createItemRef = useCallback((index: number) => {
     const ref = React.createRef<HTMLElement>()
-    rowRefs.current[index] = ref
+    itemsRefs.current[index] = ref
     return ref
-  }
+  }, []);
 
-  function onItemUpdate(index: number) {
-    if (targetView) {
-      updateProjection();
-    }
-  }
+  const onItemUpdate = useCallback((index: number) => {
+    updateProjection();
+  }, [updateProjection]);
 
+  return {
+    // State
+    state,
+    cache,
+    scrollerRef,
+    itemsRefs,
+
+    // Functions
+    scrollToInitialPosition,
+    getScrollPosition,
+    saveScrollPosition,
+    calculateRowHeight,
+    updateProjection,
+    createItemRef,
+    onItemUpdate,
+
+    // Props
+    rowCount,
+    rowRenderer,
+  }
+}
+
+export type UseVirtualScrollerResult = ReturnType<typeof useVirtualScroller>;
+
+function VirtualScrollerHooks({
+  state,
+  rowCount,
+  rowRenderer,
+  scrollerRef,
+  createItemRef,
+  onItemUpdate
+}: UseVirtualScrollerResult) {
   return useMemo(
     () => {
       const projection = [];
 
       if (rowCount) {
         for (let i = state.firstIndex; i <= state.lastIndex; i++) {
-          projection[projection.length] = rowRenderer(i, createRowRef(i), () =>
+          projection[projection.length] = rowRenderer(i, createItemRef(i), () =>
             onItemUpdate(i),
           );
         }
@@ -363,7 +396,7 @@ export function VirtualScrollerHooks({
 
       return (
         <div
-          ref={listDivRef}
+          ref={scrollerRef}
           style={{
             paddingBottom: state.paddingBottom,
             paddingTop: state.paddingTop,
