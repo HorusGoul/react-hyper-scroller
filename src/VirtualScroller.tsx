@@ -89,6 +89,10 @@ function scrollTo(targetView: VirtualScrollerTargetView, x: number, y: number) {
   window.requestAnimationFrame(() => {
     const view = isWindow(targetView) ? targetView : targetView.current;
 
+    if (!view) {
+      return;
+    }
+
     if (view === window) {
       view.scrollTo(x, y);
       return;
