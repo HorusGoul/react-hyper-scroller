@@ -1,7 +1,15 @@
 {
   "name": "react-hyper-scroller",
-  "version": "0.0.0-development",
+  "description": "Hyper-Fast Scroller for the web",
+  "version": "3.0.0-beta.6",
+  "keywords": [
+    "virtual list",
+    "scroller",
+    "virtual scroll"
+  ],
+  "license": "MIT",
   "author": "Horus Lugo <hola@horus.dev>",
+  "repository": "HorusGoul/react-hyper-scroller",
   "files": [
     "dist"
   ],
