@@ -209,8 +209,8 @@ export function useVirtualScroller({
     const visibleItemsMaxTop = viewport.scrollY + viewport.height;
     let visibleItemsHeight = 0;
     let itemsHeightSum = 0;
-    let firstIndex: number = NaN;
-    let lastIndex: number = NaN;
+    let firstIndex: number | undefined;
+    let lastIndex: number | undefined;
     let paddingTop = 0;
     let paddingBottom = 0;
 
@@ -218,7 +218,7 @@ export function useVirtualScroller({
       const prevSum = itemsHeightSum;
       itemsHeightSum += calculateRowHeight(i);
 
-      if (itemsHeightSum >= viewport.scrollY && isNaN(lastIndex)) {
+      if (itemsHeightSum >= viewport.scrollY && firstIndex === undefined) {
         paddingTop = prevSum;
         firstIndex = i - overscanItemCount;
 
@@ -256,8 +256,8 @@ export function useVirtualScroller({
 
     setState((currentState) => ({
       ...currentState,
-      firstIndex,
-      lastIndex,
+      firstIndex: firstIndex ?? 0,
+      lastIndex: lastIndex ?? 0,
       paddingBottom,
       paddingTop,
     }));
