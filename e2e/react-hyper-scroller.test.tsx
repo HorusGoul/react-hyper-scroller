@@ -1,30 +1,20 @@
-import { ITEMS_TO_GENERATE } from "./test-app/src/utils";
+import { ITEMS_TO_GENERATE } from "../src/utils";
 import { Page } from "puppeteer";
 
 jest.setTimeout(32000);
 
-describe("e2e tests", async () => {
-  beforeAll(async () => {
-    await page.emulate({
-      viewport: {
-        width: 500,
-        height: 720,
-      },
-      userAgent: "",
-    });
-  });
-
+describe("e2e tests", () => {
   test("VirtualScroller loads correctly", async () => {
-    await page.goto("http://localhost:3001");
+    await page.goto("http://localhost:3000");
 
-    const html = await page.$eval("#root", e => e.innerHTML);
+    const html = await page.$eval("#root", (e) => e.innerHTML);
     expect(html).toContain(`Item 0`);
   });
 
   test("scrolls through the list", async () => {
-    await page.goto("http://localhost:3001");
+    await page.goto("http://localhost:3000");
 
-    await page.$eval("#root", e => e.innerHTML);
+    await page.$eval("#root", (e) => e.innerHTML);
 
     for (let i = 0; i < ITEMS_TO_GENERATE; i++) {
       const endReached = await page.evaluate(() => {
@@ -42,14 +32,14 @@ describe("e2e tests", async () => {
       await scrollByInnerHeight(page);
     }
 
-    const html = await page.$eval("#root", e => e.innerHTML);
+    const html = await page.$eval("#root", (e) => e.innerHTML);
     expect(html).toContain(`Item ${ITEMS_TO_GENERATE - 1}`);
   });
 
   test("scroll restoration works", async () => {
-    await page.goto("http://localhost:3001");
+    await page.goto("http://localhost:3000");
 
-    await page.$eval("#root", e => e.innerHTML);
+    await page.$eval("#root", (e) => e.innerHTML);
 
     await scrollByInnerHeight(page);
     await scrollByInnerHeight(page);
@@ -65,7 +55,7 @@ describe("e2e tests", async () => {
 
     const scrollAfterMount = await getScrollY();
 
-    expect(scrollBeforeUnmount).toBe(scrollAfterMount);
+    expect(scrollAfterMount).toBe(scrollBeforeUnmount);
     expect(scrollAfterUnmount).toBe(0);
 
     function getScrollY() {
@@ -73,7 +63,10 @@ describe("e2e tests", async () => {
     }
 
     async function toggleScroller() {
-      await page.$eval("#toggle-btn", (button: HTMLButtonElement) => button.click());
+      await page.$eval("#toggle-btn", (element) => {
+        const button = element as HTMLButtonElement;
+        button.click();
+      });
     }
   });
 });
@@ -94,5 +87,5 @@ async function scrollByInnerHeight(page: Page) {
 }
 
 function delay(timeout: number) {
-  return new Promise(resolve => setTimeout(resolve, timeout));
+  return new Promise((resolve) => setTimeout(resolve, timeout));
 }
