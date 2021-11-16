@@ -1,0 +1,27 @@
+{
+  "extends": [
+    "plugin:@typescript-eslint/recommended",
+    "plugin:prettier/recommended",
+    "plugin:react-hooks/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "rules": {
+    "prettier/prettier": "warn"
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/**/*.ts",
+        "lib/**/*.ts",
+        "e2e/**/*.ts",
+        "src/**/*.tsx",
+        "lib/**/*.tsx",
+        "e2e/**/*.tsx"
+      ],
+      "parserOptions": {
+        "project": ["./tsconfig.json"]
+      }
+    }
+  ]
+}

@@ -1,18 +1,18 @@
-import * as React from "react";
-import * as ReactDOM from "react-dom";
-import { useVirtualScroller, VirtualScroller } from "../lib/index";
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
+import { useVirtualScroller, VirtualScroller } from '../lib/index';
 import {
   createItems,
   createRowRenderer,
   PRECALCULATED_ITEM_HEIGHT,
-} from "./utils";
+} from './utils';
 
 const items = createItems();
 const rowRenderer = createRowRenderer(items);
 
 function App() {
   const [showing, setShowing] = React.useState(true);
-  const [cacheKey, setCacheKey] = React.useState("test-scroller");
+  const [cacheKey, setCacheKey] = React.useState('test-scroller');
 
   function toggle() {
     setShowing(!showing);
@@ -30,8 +30,8 @@ function App() {
     <>
       <div
         style={{
-          position: "sticky",
-          background: "#cecece",
+          position: 'sticky',
+          background: '#cecece',
           padding: 8,
           top: 0,
         }}
@@ -57,5 +57,5 @@ function App() {
 render(<App />);
 
 export function render(root: JSX.Element) {
-  ReactDOM.render(root, document.getElementById("root"));
+  ReactDOM.render(root, document.getElementById('root'));
 }

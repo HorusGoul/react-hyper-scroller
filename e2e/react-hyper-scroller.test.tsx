@@ -1,20 +1,20 @@
-import { ITEMS_TO_GENERATE } from "../src/utils";
-import { Page } from "puppeteer";
+import { ITEMS_TO_GENERATE } from '../src/utils';
+import { Page } from 'puppeteer';
 
 jest.setTimeout(32000);
 
-describe("e2e tests", () => {
-  test("VirtualScroller loads correctly", async () => {
-    await page.goto("http://localhost:3000");
+describe('e2e tests', () => {
+  test('VirtualScroller loads correctly', async () => {
+    await page.goto('http://localhost:3000');
 
-    const html = await page.$eval("#root", (e) => e.innerHTML);
+    const html = await page.$eval('#root', (e) => e.innerHTML);
     expect(html).toContain(`Item 0`);
   });
 
-  test("scrolls through the list", async () => {
-    await page.goto("http://localhost:3000");
+  test('scrolls through the list', async () => {
+    await page.goto('http://localhost:3000');
 
-    await page.$eval("#root", (e) => e.innerHTML);
+    await page.$eval('#root', (e) => e.innerHTML);
 
     for (let i = 0; i < ITEMS_TO_GENERATE; i++) {
       const endReached = await page.evaluate(() => {
@@ -32,14 +32,14 @@ describe("e2e tests", () => {
       await scrollByInnerHeight(page);
     }
 
-    const html = await page.$eval("#root", (e) => e.innerHTML);
+    const html = await page.$eval('#root', (e) => e.innerHTML);
     expect(html).toContain(`Item ${ITEMS_TO_GENERATE - 1}`);
   });
 
-  test("scroll restoration works", async () => {
-    await page.goto("http://localhost:3000");
+  test('scroll restoration works', async () => {
+    await page.goto('http://localhost:3000');
 
-    await page.$eval("#root", (e) => e.innerHTML);
+    await page.$eval('#root', (e) => e.innerHTML);
 
     await scrollByInnerHeight(page);
     await scrollByInnerHeight(page);
@@ -59,20 +59,20 @@ describe("e2e tests", () => {
     expect(scrollAfterUnmount).toBe(0);
   });
 
-  test("cache key scroll restoration works", async () => {
-    await page.goto("http://localhost:3000");
+  test('cache key scroll restoration works', async () => {
+    await page.goto('http://localhost:3000');
 
-    await page.$eval("#root", (e) => e.innerHTML);
+    await page.$eval('#root', (e) => e.innerHTML);
 
-    await clearInput("#cache-key");
-    await page.type("#cache-key", "first-cache-key");
+    await clearInput('#cache-key');
+    await page.type('#cache-key', 'first-cache-key');
     await scrollByInnerHeight(page);
     await scrollByInnerHeight(page);
     await scrollByInnerHeight(page);
     const scrollWithFirstCacheKey = await getScrollY();
 
-    await clearInput("#cache-key");
-    await page.type("#cache-key", "second-cache-key");
+    await clearInput('#cache-key');
+    await page.type('#cache-key', 'second-cache-key');
     await delay(100);
 
     const initialScrollWithSecondCacheKey = await getScrollY();
@@ -84,18 +84,18 @@ describe("e2e tests", () => {
     await scrollByInnerHeight(page);
     const scrollWithSecondCacheKey = await getScrollY();
 
-    await clearInput("#cache-key");
-    await page.type("#cache-key", "first-cache-key");
+    await clearInput('#cache-key');
+    await page.type('#cache-key', 'first-cache-key');
     await delay(100);
     const scrollAfterRestoringFirstCacheKey = await getScrollY();
 
     expect(scrollAfterRestoringFirstCacheKey).toBe(scrollWithFirstCacheKey);
     expect(scrollAfterRestoringFirstCacheKey).not.toBe(
-      scrollWithSecondCacheKey
+      scrollWithSecondCacheKey,
     );
 
-    await clearInput("#cache-key");
-    await page.type("#cache-key", "third-cache-key");
+    await clearInput('#cache-key');
+    await page.type('#cache-key', 'third-cache-key');
     await delay(100);
     const initialScrollWithThirdCacheKey = await getScrollY();
 
@@ -109,7 +109,7 @@ function getScrollY() {
 }
 
 async function toggleScroller() {
-  await page.$eval("#toggle-btn", (element) => {
+  await page.$eval('#toggle-btn', (element) => {
     const button = element as HTMLButtonElement;
     button.click();
   });
@@ -133,7 +133,7 @@ async function scrollByInnerHeight(page: Page) {
 async function clearInput(selector: string) {
   await page.$eval(selector, (element) => {
     const input = element as HTMLInputElement;
-    input.value = "";
+    input.value = '';
   });
 }
 

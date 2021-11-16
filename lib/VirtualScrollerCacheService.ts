@@ -26,7 +26,7 @@ export class VirtualScrollerCacheService {
   }
 
   public getNextId() {
-    return "cache-" + this.idSequence++;
+    return 'cache-' + this.idSequence++;
   }
 
   private createCache(key: string) {
