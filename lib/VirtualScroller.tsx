@@ -139,9 +139,13 @@ export function useVirtualScroller({
     scrollTo(targetView, 0, initialScrollPosition);
   }, [targetView, initialScrollPosition]);
 
-  const restoreScroll = useCallback(() => {
-    scrollTo(targetView, 0, cache.scrollPosition);
-  }, [targetView, cache.scrollPosition]);
+  const restoreScroll = useCallback(
+    (cacheKey: string) => {
+      const cache = VirtualScrollerCacheService.getCache(cacheKey);
+      scrollTo(targetView, 0, cache.scrollPosition);
+    },
+    [targetView]
+  );
 
   const getScrollPosition = useCallback(() => {
     const y = isWindow(targetView)
@@ -388,12 +392,15 @@ function VirtualScrollerHooks({
 
   useLayoutEffect(() => {
     if (scrollRestoration) {
-      restoreScroll();
+      console.log("scroll restoration");
+      restoreScroll(cacheKey);
     } else {
+      console.log("scroll to initial position");
       scrollToInitialPosition();
     }
 
     return () => {
+      console.log("save scroll position");
       saveScrollPosition(cacheKey);
     };
   }, [
