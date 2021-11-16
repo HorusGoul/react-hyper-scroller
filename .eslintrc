@@ -11,14 +11,7 @@
   },
   "overrides": [
     {
-      "files": [
-        "src/**/*.ts",
-        "lib/**/*.ts",
-        "e2e/**/*.ts",
-        "src/**/*.tsx",
-        "lib/**/*.tsx",
-        "e2e/**/*.tsx"
-      ],
+      "files": ["src/**/*.ts", "e2e/**/*.ts", "src/**/*.tsx", "e2e/**/*.tsx"],
       "parserOptions": {
         "project": ["./tsconfig.json"]
       }
