@@ -135,6 +135,12 @@ export function useVirtualScroller({
     setInternalCacheKey(key);
   }, [cacheKey]);
 
+  const resetState = useCallback(() => {
+    setState({
+      ...defaultVirtualScrollerState,
+    });
+  }, []);
+
   const scrollToInitialPosition = useCallback(() => {
     scrollTo(targetView, 0, initialScrollPosition);
   }, [targetView, initialScrollPosition]);
@@ -296,24 +302,6 @@ export function useVirtualScroller({
     };
   }, [targetView, updateProjection]);
 
-  useLayoutEffect(() => {
-    if (!targetView) {
-      return;
-    }
-
-    setState({ ...defaultVirtualScrollerState });
-
-    updateProjection();
-  }, [internalCacheKey, targetView, updateProjection]);
-
-  useLayoutEffect(() => {
-    if (!targetView) {
-      return;
-    }
-
-    updateProjection();
-  }, [updateProjection, targetView]);
-
   const createItemRef = useCallback((index: number) => {
     const ref = React.createRef<HTMLElement>();
     itemsRefs.current[index] = ref;
@@ -345,6 +333,7 @@ export function useVirtualScroller({
     createItemRef,
     onItemUpdate,
     restoreScroll,
+    resetState,
 
     // Props
     itemCount,
@@ -384,8 +373,15 @@ function VirtualScrollerHooks({
   scrollToInitialPosition,
   scrollRestoration,
   cacheKey,
+  updateProjection,
+  resetState,
 }: VirtualScrollerProps) {
   const { firstIndex, lastIndex, paddingBottom, paddingTop } = state;
+
+  useLayoutEffect(() => {
+    resetState();
+    updateProjection();
+  }, [cacheKey, updateProjection, resetState]);
 
   useLayoutEffect(() => {
     if (scrollRestoration) {

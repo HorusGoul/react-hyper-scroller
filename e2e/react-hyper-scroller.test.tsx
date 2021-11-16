@@ -102,6 +102,30 @@ describe('e2e tests', () => {
     expect(initialScrollWithThirdCacheKey).toBe(0);
     expect(initialScrollWithSecondCacheKey).not.toBe(scrollWithFirstCacheKey);
   });
+
+  test('hiding scroller, changing cache key and then showing should display the correct items instead of only one', async () => {
+    await page.goto('http://localhost:3000/demos/scroll-restoration.html');
+
+    let html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item 0`);
+
+    await clearInput('#cache-key');
+    await page.type('#cache-key', 'a');
+
+    html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item 1`);
+
+    await toggleScroller();
+    await delay(100);
+
+    await clearInput('#cache-key');
+    await page.type('#cache-key', 'b');
+    await toggleScroller();
+    await delay(100);
+
+    html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item 1`);
+  });
 });
 
 function getScrollY() {
