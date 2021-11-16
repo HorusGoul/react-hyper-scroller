@@ -295,18 +295,13 @@ export function useVirtualScroller({
 
     setState({ ...defaultVirtualScrollerState });
 
-    if (scrollRestoration) {
-      restoreScroll();
-    } else {
-      scrollToInitialPosition();
-    }
-
     updateProjection();
-
-    return () => {
-      saveScrollPosition();
-    };
-  }, [internalCacheKey, targetView]);
+  }, [
+    internalCacheKey,
+    targetView,
+    updateProjection,
+    defaultVirtualScrollerState,
+  ]);
 
   useLayoutEffect(() => {
     if (!targetView) {
@@ -344,9 +339,12 @@ export function useVirtualScroller({
     updateProjection,
     createItemRef,
     onItemUpdate,
+    restoreScroll,
 
     // Props
     itemCount,
+    scrollRestoration,
+    cacheKey: internalCacheKey,
   };
 }
 
@@ -376,12 +374,37 @@ function VirtualScrollerHooks({
   scrollerRef,
   createItemRef,
   onItemUpdate,
+  saveScrollPosition,
+  restoreScroll,
+  scrollToInitialPosition,
+  scrollRestoration,
+  cacheKey,
 }: VirtualScrollerProps) {
+  const { firstIndex, lastIndex, paddingBottom, paddingTop } = state;
+
+  useLayoutEffect(() => {
+    if (scrollRestoration) {
+      restoreScroll();
+    } else {
+      scrollToInitialPosition();
+    }
+
+    return () => {
+      saveScrollPosition();
+    };
+  }, [
+    cacheKey,
+    scrollRestoration,
+    scrollToInitialPosition,
+    saveScrollPosition,
+    restoreScroll,
+  ]);
+
   return useMemo(() => {
     const projection = [];
 
     if (itemCount) {
-      for (let i = state.firstIndex; i <= state.lastIndex; i++) {
+      for (let i = firstIndex; i <= lastIndex; i++) {
         projection[projection.length] = itemRenderer(i, createItemRef(i), () =>
           onItemUpdate(i)
         );
@@ -392,14 +415,14 @@ function VirtualScrollerHooks({
       <div
         ref={scrollerRef}
         style={{
-          paddingBottom: state.paddingBottom,
-          paddingTop: state.paddingTop,
+          paddingBottom,
+          paddingTop,
         }}
       >
         {projection}
       </div>
     );
-  }, [state]);
+  }, [cacheKey, firstIndex, lastIndex, paddingBottom, paddingTop]);
 }
 
 export const VirtualScroller = memo(VirtualScrollerHooks);
