@@ -50,8 +50,8 @@ npm install --save react-hyper-scroller
 MIT © [HorusGoul](https://github.com/HorusGoul)
 
 <!-- prettier-ignore-start -->
-[all-contributors-badge]: https://img.shields.io/github/all-contributors/HorusGoul/react-hyper-scroller/next
-[coverage-badge]: https://img.shields.io/codecov/c/github/HorusGoul/react-hyper-scroller.svg?style=flat-square
+[all-contributors-badge]: https://img.shields.io/github/all-contributors/HorusGoul/react-hyper-scroller/main
+[coverage-badge]: https://img.shields.io/codecov/c/github/HorusGoul/react-hyper-scroller.svg
 [coverage]: https://codecov.io/github/HorusGoul/react-hyper-scroller
 [license-badge]: https://img.shields.io/github/license/HorusGoul/react-hyper-scroller
 [license]: ./LICENSE
