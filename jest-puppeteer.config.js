@@ -3,10 +3,10 @@ module.exports = {
     headless: true,
   },
 
-  browserContext: "default",
+  browserContext: 'default',
 
   server: {
-    command: "npm run dev",
+    command: 'VITE_COVERAGE=true npm run dev',
     port: 3000,
     launchTimeout: 10000,
     debug: true,
