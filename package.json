@@ -29,7 +29,9 @@
     "typecheck": "tsc --noEmit",
     "lint:base": "eslint --ext .js,.json,.ts,.tsx",
     "lint": "npm run lint:base -- src lib e2e",
-    "prepare": "simple-pre-commit"
+    "prepare": "simple-pre-commit",
+    "contributors:add": "all-contributors add",
+    "contributors:generate": "all-contributors generate"
   },
   "simple-pre-commit": "npm run typecheck && npx lint-staged",
   "lint-staged": {
@@ -50,6 +52,7 @@
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",
     "@vitejs/plugin-react": "^1.0.0",
+    "all-contributors-cli": "^6.20.0",
     "eslint": "^8.2.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^4.0.0",
