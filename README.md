@@ -1,10 +1,13 @@
 # react-hyper-scroller
 
 [![NPM](https://img.shields.io/npm/v/react-hyper-scroller.svg)](https://www.npmjs.com/package/react-hyper-scroller)
+[![Bundlephobia][bundlephobia-badge]][bundlephobia]
 [![Code Coverage][coverage-badge]][coverage]
 [![Test](https://github.com/HorusGoul/react-hyper-scroller/actions/workflows/tests.yml/badge.svg)](https://github.com/HorusGoul/react-hyper-scroller/actions/workflows/tests.yml)
 [![Github All Contributors][all-contributors-badge]](#contributors)
 [![License][license-badge]][license]
+[![License][twitter-badge]][twitter]
+[![License][star-badge]][star]
 
 > Virtual Scroller built for the mobile web
 
@@ -45,14 +48,16 @@ npm install --save react-hyper-scroller
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-## License
-
-MIT © [HorusGoul](https://github.com/HorusGoul)
-
 <!-- prettier-ignore-start -->
 [all-contributors-badge]: https://img.shields.io/github/all-contributors/HorusGoul/react-hyper-scroller/main
 [coverage-badge]: https://img.shields.io/codecov/c/github/HorusGoul/react-hyper-scroller.svg
 [coverage]: https://codecov.io/github/HorusGoul/react-hyper-scroller
 [license-badge]: https://img.shields.io/github/license/HorusGoul/react-hyper-scroller
 [license]: ./LICENSE
+[bundlephobia-badge]: https://img.shields.io/bundlephobia/minzip/react-hyper-scroller
+[bundlephobia]: https://bundlephobia.com/package/react-hyper-scroller
+[twitter-badge]: https://img.shields.io/twitter/follow/horusgoul.svg?style=social&label=Follow
+[twitter]: https://twitter.com/horusgoul
+[star-badge]: https://img.shields.io/github/stars/HorusGoul/react-hyper-scroller.svg?style=social&label=Star
+[star]: https://github.com/horusgoul/react-hyper-scroller
 <!-- prettier-ignore-end -->
