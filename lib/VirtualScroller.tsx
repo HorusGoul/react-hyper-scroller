@@ -151,9 +151,13 @@ export function useVirtualScroller({
     return y < initialScrollPosition ? initialScrollPosition : y;
   }, [targetView, initialScrollPosition]);
 
-  const saveScrollPosition = useCallback(() => {
-    cache.scrollPosition = getScrollPosition();
-  }, [cache, getScrollPosition]);
+  const saveScrollPosition = useCallback(
+    (cacheKey: string) => {
+      const cache = VirtualScrollerCacheService.getCache(cacheKey);
+      cache.scrollPosition = getScrollPosition();
+    },
+    [getScrollPosition]
+  );
 
   const calculateRowHeight = useCallback(
     (index: number) => {
@@ -390,7 +394,7 @@ function VirtualScrollerHooks({
     }
 
     return () => {
-      saveScrollPosition();
+      saveScrollPosition(cacheKey);
     };
   }, [
     cacheKey,
