@@ -22,20 +22,19 @@
     }
   },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "serve": "vite preview",
+    "dev": "vite --config ./config/vite-dev.config.ts",
+    "build": "tsc && vite build --config ./config/vite-build.config.ts",
     "test:e2e": "jest --config jest.e2e.js",
     "typecheck": "tsc --noEmit",
     "lint:base": "eslint --ext .js,.json,.ts,.tsx",
-    "lint": "npm run lint:base -- src lib e2e",
+    "lint": "npm run lint:base -- src e2e",
     "prepare": "simple-pre-commit",
     "contributors:add": "all-contributors add",
     "contributors:generate": "all-contributors generate"
   },
   "simple-pre-commit": "npm run typecheck && npx lint-staged",
   "lint-staged": {
-    "{src,lib,e2e}/**/*.{ts,js,json}": [
+    "{src,e2e}/**/*.{ts,js,json}": [
       "npm run lint:base -- --fix"
     ]
   },

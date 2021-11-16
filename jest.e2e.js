@@ -8,7 +8,7 @@ module.exports = {
   },
 
   collectCoverage: true,
-  collectCoverageFrom: ['lib/**/*.ts', 'lib/**/*.tsx'],
+  collectCoverageFrom: ['src/lib/**/*.ts', 'src/lib/**/*.tsx'],
   coverageReporters: ['json', 'text', 'lcov'],
 
   setupFilesAfterEnv: ['jest-puppeteer-istanbul/lib/setup'],

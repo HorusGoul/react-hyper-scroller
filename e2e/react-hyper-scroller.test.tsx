@@ -5,14 +5,14 @@ jest.setTimeout(32000);
 
 describe('e2e tests', () => {
   test('VirtualScroller loads correctly', async () => {
-    await page.goto('http://localhost:3000');
+    await page.goto('http://localhost:3000/demos/scroll-restoration.html');
 
     const html = await page.$eval('#root', (e) => e.innerHTML);
     expect(html).toContain(`Item 0`);
   });
 
   test('scrolls through the list', async () => {
-    await page.goto('http://localhost:3000');
+    await page.goto('http://localhost:3000/demos/scroll-restoration.html');
 
     await page.$eval('#root', (e) => e.innerHTML);
 
@@ -37,7 +37,7 @@ describe('e2e tests', () => {
   });
 
   test('scroll restoration works', async () => {
-    await page.goto('http://localhost:3000');
+    await page.goto('http://localhost:3000/demos/scroll-restoration.html');
 
     await page.$eval('#root', (e) => e.innerHTML);
 
@@ -60,7 +60,7 @@ describe('e2e tests', () => {
   });
 
   test('cache key scroll restoration works', async () => {
-    await page.goto('http://localhost:3000');
+    await page.goto('http://localhost:3000/demos/scroll-restoration.html');
 
     await page.$eval('#root', (e) => e.innerHTML);
 
