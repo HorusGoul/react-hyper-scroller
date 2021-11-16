@@ -3,12 +3,14 @@ import { Page } from 'puppeteer';
 
 jest.setTimeout(32000);
 
-describe('e2e tests', () => {
+describe('Window as targetView', () => {
   test('VirtualScroller loads correctly', async () => {
     await page.goto('http://localhost:3000/demos/scroll-restoration.html');
 
     const html = await page.$eval('#root', (e) => e.innerHTML);
     expect(html).toContain(`Item 0`);
+    expect(html).toContain(`Item 1`);
+    expect(html).toContain(`Item 2`);
   });
 
   test('scrolls through the list', async () => {
@@ -128,8 +130,145 @@ describe('e2e tests', () => {
   });
 });
 
-function getScrollY() {
-  return page.evaluate(() => window.scrollY);
+describe('HTMLElement as targetView', () => {
+  test('VirtualScroller loads correctly', async () => {
+    await page.goto('http://localhost:3000/demos/different-target.html');
+
+    const html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item 0`);
+    expect(html).toContain(`Item 1`);
+    expect(html).toContain(`Item 2`);
+  });
+
+  test('scrolls through the list', async () => {
+    await page.goto('http://localhost:3000/demos/different-target.html');
+
+    await page.$eval('#root', (e) => e.innerHTML);
+    await delay(100);
+
+    for (let i = 0; i < ITEMS_TO_GENERATE; i++) {
+      const endReached = await page.evaluate(() => {
+        const targetView = document.querySelector(
+          '#target-view',
+        ) as HTMLDivElement;
+
+        if (
+          targetView.scrollTop + targetView.clientHeight >=
+          targetView.scrollHeight
+        ) {
+          return true;
+        }
+
+        return false;
+      });
+
+      if (endReached) {
+        break;
+      }
+
+      await scrollByInnerHeight(page, '#target-view');
+    }
+
+    const html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item ${ITEMS_TO_GENERATE - 1}`);
+  });
+
+  test('scroll restoration works', async () => {
+    await page.goto('http://localhost:3000/demos/different-target.html');
+
+    await page.$eval('#root', (e) => e.innerHTML);
+
+    await scrollByInnerHeight(page, '#target-view');
+    await scrollByInnerHeight(page, '#target-view');
+    await scrollByInnerHeight(page, '#target-view');
+
+    const scrollBeforeUnmount = await getScrollY('#target-view');
+    await toggleScroller();
+    await delay(100);
+
+    const scrollAfterUnmount = await getScrollY('#target-view');
+    await toggleScroller();
+    await delay(100);
+
+    const scrollAfterMount = await getScrollY('#target-view');
+
+    expect(scrollAfterMount).toBe(scrollBeforeUnmount);
+    expect(scrollAfterUnmount).toBe(0);
+  });
+
+  test('cache key scroll restoration works', async () => {
+    await page.goto('http://localhost:3000/demos/different-target.html');
+
+    await page.$eval('#root', (e) => e.innerHTML);
+
+    await clearInput('#cache-key');
+    await page.type('#cache-key', 'first-cache-key');
+    await scrollByInnerHeight(page, '#target-view');
+    await scrollByInnerHeight(page, '#target-view');
+    await scrollByInnerHeight(page, '#target-view');
+    const scrollWithFirstCacheKey = await getScrollY('#target-view');
+
+    await clearInput('#cache-key');
+    await page.type('#cache-key', 'second-cache-key');
+    await delay(100);
+
+    const initialScrollWithSecondCacheKey = await getScrollY('#target-view');
+
+    expect(initialScrollWithSecondCacheKey).toBe(0);
+    expect(initialScrollWithSecondCacheKey).not.toBe(scrollWithFirstCacheKey);
+
+    await scrollByInnerHeight(page, '#target-view');
+    await scrollByInnerHeight(page, '#target-view');
+    const scrollWithSecondCacheKey = await getScrollY('#target-view');
+
+    await clearInput('#cache-key');
+    await page.type('#cache-key', 'first-cache-key');
+    await delay(100);
+    const scrollAfterRestoringFirstCacheKey = await getScrollY('#target-view');
+
+    expect(scrollAfterRestoringFirstCacheKey).toBe(scrollWithFirstCacheKey);
+    expect(scrollAfterRestoringFirstCacheKey).not.toBe(
+      scrollWithSecondCacheKey,
+    );
+
+    await clearInput('#cache-key');
+    await page.type('#cache-key', 'third-cache-key');
+    await delay(100);
+    const initialScrollWithThirdCacheKey = await getScrollY('#target-view');
+
+    expect(initialScrollWithThirdCacheKey).toBe(0);
+    expect(initialScrollWithSecondCacheKey).not.toBe(scrollWithFirstCacheKey);
+  });
+
+  test('hiding scroller, changing cache key and then showing should display the correct items instead of only one', async () => {
+    await page.goto('http://localhost:3000/demos/different-target.html');
+
+    let html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item 0`);
+
+    await clearInput('#cache-key');
+    await page.type('#cache-key', 'a');
+
+    html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item 1`);
+
+    await toggleScroller();
+    await delay(100);
+
+    await clearInput('#cache-key');
+    await page.type('#cache-key', 'b');
+    await toggleScroller();
+    await delay(100);
+
+    html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item 1`);
+  });
+});
+
+function getScrollY(selector?: string) {
+  return selector
+    ? page.$eval(selector, (element) => element.scrollTop)
+    : page.evaluate(() => window.scrollY);
 }
 
 async function toggleScroller() {
@@ -139,7 +278,26 @@ async function toggleScroller() {
   });
 }
 
-async function scrollByInnerHeight(page: Page) {
+async function scrollByInnerHeight(page: Page, selector?: string) {
+  if (selector) {
+    await page.evaluate(`
+    (async () => {
+      const targetView = document.querySelector('${selector}');
+
+      const timeout = new Promise((resolve, reject) => {
+        setTimeout(() => {
+          targetView.scrollBy(0, targetView.clientHeight);
+          resolve();
+        }, 100);
+      });
+
+      await timeout;
+    })();
+  `);
+
+    return;
+  }
+
   await page.evaluate(`
     (async () => {
       const timeout = new Promise((resolve, reject) => {

@@ -378,7 +378,7 @@ function VirtualScrollerHooks({
 }: VirtualScrollerProps) {
   const { firstIndex, lastIndex, paddingBottom, paddingTop } = state;
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     resetState();
     updateProjection();
   }, [cacheKey, updateProjection, resetState]);

@@ -10,6 +10,9 @@ function App() {
         <li>
           <a href="/demos/scroll-restoration.html">Scroll restoration</a>
         </li>
+        <li>
+          <a href="/demos/different-target.html">Different target</a>
+        </li>
       </ul>
     </>
   );
