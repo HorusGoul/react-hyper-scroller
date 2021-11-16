@@ -57,19 +57,63 @@ describe("e2e tests", () => {
 
     expect(scrollAfterMount).toBe(scrollBeforeUnmount);
     expect(scrollAfterUnmount).toBe(0);
+  });
 
-    function getScrollY() {
-      return page.evaluate(() => window.scrollY);
-    }
+  test("cache key scroll restoration works", async () => {
+    await page.goto("http://localhost:3000");
 
-    async function toggleScroller() {
-      await page.$eval("#toggle-btn", (element) => {
-        const button = element as HTMLButtonElement;
-        button.click();
-      });
-    }
+    await page.$eval("#root", (e) => e.innerHTML);
+
+    await clearInput("#cache-key");
+    await page.type("#cache-key", "first-cache-key");
+    await scrollByInnerHeight(page);
+    await scrollByInnerHeight(page);
+    await scrollByInnerHeight(page);
+    const scrollWithFirstCacheKey = await getScrollY();
+
+    await clearInput("#cache-key");
+    await page.type("#cache-key", "second-cache-key");
+    await delay(100);
+
+    const initialScrollWithSecondCacheKey = await getScrollY();
+
+    expect(initialScrollWithSecondCacheKey).toBe(0);
+    expect(initialScrollWithSecondCacheKey).not.toBe(scrollWithFirstCacheKey);
+
+    await scrollByInnerHeight(page);
+    await scrollByInnerHeight(page);
+    const scrollWithSecondCacheKey = await getScrollY();
+
+    await clearInput("#cache-key");
+    await page.type("#cache-key", "first-cache-key");
+    await delay(100);
+    const scrollAfterRestoringFirstCacheKey = await getScrollY();
+
+    expect(scrollAfterRestoringFirstCacheKey).toBe(scrollWithFirstCacheKey);
+    expect(scrollAfterRestoringFirstCacheKey).not.toBe(
+      scrollWithSecondCacheKey
+    );
+
+    await clearInput("#cache-key");
+    await page.type("#cache-key", "third-cache-key");
+    await delay(100);
+    const initialScrollWithThirdCacheKey = await getScrollY();
+
+    expect(initialScrollWithThirdCacheKey).toBe(0);
+    expect(initialScrollWithSecondCacheKey).not.toBe(scrollWithFirstCacheKey);
   });
 });
+
+function getScrollY() {
+  return page.evaluate(() => window.scrollY);
+}
+
+async function toggleScroller() {
+  await page.$eval("#toggle-btn", (element) => {
+    const button = element as HTMLButtonElement;
+    button.click();
+  });
+}
 
 async function scrollByInnerHeight(page: Page) {
   await page.evaluate(`
@@ -84,6 +128,13 @@ async function scrollByInnerHeight(page: Page) {
       await timeout;
     })();
   `);
+}
+
+async function clearInput(selector: string) {
+  await page.$eval(selector, (element) => {
+    const input = element as HTMLInputElement;
+    input.value = "";
+  });
 }
 
 function delay(timeout: number) {
