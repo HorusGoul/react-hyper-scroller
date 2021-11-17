@@ -17,28 +17,38 @@ export function isHTMLElement(view: HTMLElement | Window): view is HTMLElement {
   return window !== view;
 }
 
+export function getViewScrollHeight(view: HTMLElement | Window) {
+  return isHTMLElement(view) ? view.scrollHeight : document.body.scrollHeight;
+}
+
+export function getViewHeight(view: HTMLElement | Window) {
+  return isHTMLElement(view) ? view.clientHeight : window.innerHeight;
+}
+
 export function scrollTo(
   targetView: HyperScrollerTargetView,
   x: number,
   y: number,
-) {
-  window.requestAnimationFrame(() => {
-    const view = isWindow(targetView) ? targetView : targetView.current;
+): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => {
+      const view = isWindow(targetView) ? targetView : targetView.current;
 
-    if (!view) {
-      return;
-    }
+      if (!view) {
+        return resolve();
+      }
 
-    if (view === window) {
-      view.scrollTo(x, y);
-      return;
-    }
+      if (view === window) {
+        view.scrollTo(x, y);
+        return resolve();
+      }
 
-    if (isHTMLElement(view)) {
-      view.scrollTop = y;
-      view.scrollLeft = x;
-      return;
-    }
+      if (isHTMLElement(view)) {
+        view.scrollTop = y;
+        view.scrollLeft = x;
+        return resolve();
+      }
+    });
   });
 }
 

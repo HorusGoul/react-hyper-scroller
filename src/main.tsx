@@ -16,6 +16,9 @@ function App() {
         <li>
           <a href="/demos/different-target.html">Different target</a>
         </li>
+        <li>
+          <a href="/demos/different-target.html">Scroll to item</a>
+        </li>
       </ul>
     </>
   );

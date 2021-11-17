@@ -1,7 +1,7 @@
 interface HyperScrollerCacheItem {
   key: string;
   height: number;
-  index?: number;
+  index: number;
 }
 
 export class HyperScrollerCache {
@@ -23,7 +23,7 @@ export class HyperScrollerCache {
 
   public readonly key: string;
   public scrollPosition = 0;
-
+  public estimatedItemHeight = 0;
   private itemsByKey: Record<string, HyperScrollerCacheItem> = {};
   private itemsByIndex: HyperScrollerCacheItem[] = [];
 
@@ -48,5 +48,27 @@ export class HyperScrollerCache {
 
   public getItemByIndex(index: number): HyperScrollerCacheItem | undefined {
     return this.itemsByIndex[index];
+  }
+
+  public getItemScrollPosition(key: string): number | undefined {
+    const item = this.getItemByKey(key);
+
+    if (!item) {
+      return;
+    }
+
+    let scrollPosition = 0;
+
+    for (let i = 0; i < item.index; i++) {
+      const item = this.itemsByIndex[i];
+
+      if (item) {
+        scrollPosition += item.height;
+      } else {
+        scrollPosition += this.estimatedItemHeight;
+      }
+    }
+
+    return scrollPosition;
   }
 }

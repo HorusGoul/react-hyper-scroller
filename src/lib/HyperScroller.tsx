@@ -16,6 +16,8 @@ import {
   scrollTo,
   HyperScrollerTargetView,
   sanitizeReactKey,
+  getViewScrollHeight,
+  getViewHeight,
 } from './utils';
 import { HyperScrollerCache } from './HyperScrollerCache';
 
@@ -85,6 +87,7 @@ interface HyperScrollerController {
   scrollToInitialPosition(): void;
   restoreScrollPosition(cache: HyperScrollerCache): void;
   saveScrollPosition(cache: HyperScrollerCache): void;
+  scrollToItem(itemKey: string): void;
 
   // State
   state: {
@@ -130,6 +133,8 @@ export function useHyperScrollerController({
     () => cache ?? HyperScrollerCache.getOrCreateCache(),
   );
 
+  internalCache.estimatedItemHeight = estimatedItemHeight;
+
   useEffect(() => {
     let newInternalCache = cache;
 
@@ -167,8 +172,76 @@ export function useHyperScrollerController({
     [getScrollPosition],
   );
 
+  const scrollToItemRAFRef = useRef<number>();
+
+  useEffect(() => {
+    return () => {
+      if (scrollToItemRAFRef.current) {
+        cancelAnimationFrame(scrollToItemRAFRef.current);
+      }
+    };
+  }, []);
+
+  const scrollToItem = useCallback(
+    (key: string, topAdjustment = 100) => {
+      const view = isWindow(targetView) ? targetView : targetView.current;
+
+      if (!view) {
+        return;
+      }
+
+      const item = internalCache.getItemByKey(key);
+      const position = internalCache.getItemScrollPosition(key);
+
+      if (!item || position === undefined) {
+        return;
+      }
+
+      const recursiveScrollToRef = () => {
+        scrollToItemRAFRef.current = window.requestAnimationFrame(() => {
+          const ref = itemsRefs.current[item.index];
+
+          if (!ref) {
+            return recursiveScrollToRef();
+          }
+
+          const element = ref.current;
+
+          if (!element) {
+            return recursiveScrollToRef();
+          }
+
+          const box = element.getBoundingClientRect();
+
+          const currentPosition = getScrollPosition();
+          const newPosition = currentPosition + box.top - topAdjustment;
+          const viewScrollHeight = getViewScrollHeight(view);
+          const viewHeight = getViewHeight(view);
+
+          if (newPosition < 0 && currentPosition === 0) {
+            return;
+          }
+
+          if (newPosition > viewScrollHeight - viewHeight) {
+            scrollTo(targetView, 0, newPosition);
+            return;
+          }
+
+          if (box.top !== topAdjustment) {
+            scrollTo(targetView, 0, newPosition).then(() =>
+              recursiveScrollToRef(),
+            );
+          }
+        });
+      };
+
+      scrollTo(targetView, 0, position).then(() => recursiveScrollToRef());
+    },
+    [targetView, internalCache, getScrollPosition],
+  );
+
   const createItemRef = useCallback((index: number) => {
-    const ref = React.createRef<HTMLElement>();
+    const ref = itemsRefs.current[index] ?? React.createRef<HTMLElement>();
     itemsRefs.current[index] = ref;
     return ref;
   }, []);
@@ -271,14 +344,15 @@ export function useHyperScrollerController({
     }));
   }, [calculateRowHeight, overscanItemCount, itemCount, targetView]);
 
-  const rAFRef = useRef<number>();
+  const scheduleUpdateProjectionRAFRef = useRef<number>();
 
   const scheduleUpdateProjection = useCallback(() => {
-    if (rAFRef.current) {
-      window.cancelAnimationFrame(rAFRef.current);
+    if (scheduleUpdateProjectionRAFRef.current) {
+      window.cancelAnimationFrame(scheduleUpdateProjectionRAFRef.current);
     }
 
-    rAFRef.current = window.requestAnimationFrame(updateProjection);
+    scheduleUpdateProjectionRAFRef.current =
+      window.requestAnimationFrame(updateProjection);
   }, [updateProjection]);
 
   // Update projection on resize or scroll events
@@ -300,8 +374,8 @@ export function useHyperScrollerController({
       window.removeEventListener('resize', onEventListener);
       view.removeEventListener('scroll', onEventListener);
 
-      if (rAFRef.current) {
-        window.cancelAnimationFrame(rAFRef.current);
+      if (scheduleUpdateProjectionRAFRef.current) {
+        window.cancelAnimationFrame(scheduleUpdateProjectionRAFRef.current);
       }
     };
   }, [targetView, scheduleUpdateProjection]);
@@ -321,6 +395,7 @@ export function useHyperScrollerController({
     scrollToInitialPosition,
     restoreScrollPosition,
     saveScrollPosition,
+    scrollToItem,
 
     // Refs
     scrollerRef,
@@ -351,6 +426,27 @@ function HyperScroller({ children, controller }: HyperScrollerProps) {
   } = controller;
   const items = React.Children.toArray(children);
   const itemCount = items.length;
+
+  useEffect(() => {
+    React.Children.forEach(children, (child, index) => {
+      let key = `@@${index}`;
+
+      if (isItemChildWithProps(child)) {
+        key = String(child.key ?? child.props.hyperId ?? key);
+      }
+
+      const item = cache.getItemByKey(key);
+
+      if (!item) {
+        cache.setItem(key, index, cache.estimatedItemHeight);
+        return;
+      }
+
+      if (item) {
+        item.index = index;
+      }
+    });
+  }, [children, cache]);
 
   useEffect(() => {
     setItemCount(itemCount);
@@ -492,7 +588,7 @@ const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
         const { height } = entry.contentRect;
         cache.setItem(hyperId, index, height);
 
-        scheduleUpdateProjection();
+        // scheduleUpdateProjection();
       });
 
       resizeObserver.observe(element);
