@@ -1,7 +1,5 @@
-import * as React from 'react';
-
 interface ListItem {
-  id: number;
+  id: string;
   height: number;
   text: string;
 }
@@ -21,7 +19,7 @@ export function createItems(itemsToGenerate = DEFAULT_ITEMS_TO_GENERATE) {
       MIN_ITEM_HEIGHT;
 
     items.push({
-      id: i,
+      id: 'id-' + i,
       text: `Item ${i}. Height: ${height}`,
       height,
     });

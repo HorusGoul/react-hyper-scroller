@@ -1,6 +1,9 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import HyperScroller, { useHyperScrollerController } from '../lib/index';
+import HyperScroller, {
+  useHyperScrollerController,
+  HyperScrollerCache,
+} from '../lib/index';
 import { createItems, PRECALCULATED_ITEM_HEIGHT } from '../utils';
 
 const items = createItems();
@@ -19,7 +22,7 @@ function App() {
     estimatedItemHeight: PRECALCULATED_ITEM_HEIGHT,
     targetView,
     scrollRestoration: true,
-    cacheKey,
+    cache: HyperScrollerCache.getOrCreateCache(cacheKey),
   });
 
   return (

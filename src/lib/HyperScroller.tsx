@@ -15,8 +15,9 @@ import {
   isWindow,
   scrollTo,
   HyperScrollerTargetView,
+  sanitizeReactKey,
 } from './utils';
-import HyperScrollerCacheService from './HyperScrollerCacheService';
+import { HyperScrollerCache } from './HyperScrollerCache';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -35,11 +36,11 @@ interface UseHyperScrollerParams {
   estimatedItemHeight: number;
 
   /**
-   * Cache key on HyperScrollerCacheService.
+   * Cache
    *
-   * @defaultValue `HyperScrollerCacheService.getNextId()`
+   * @defaultValue `new HyperScrollerCache(nextInt)`
    */
-  cacheKey?: string;
+  cache?: HyperScrollerCache;
 
   /**
    * Number of items that will be rendered before and after the
@@ -82,8 +83,8 @@ interface HyperScrollerController {
   scheduleUpdateProjection(): void;
   resetState(): void;
   scrollToInitialPosition(): void;
-  restoreScrollPosition(cacheKey: string): void;
-  saveScrollPosition(cacheKey: string): void;
+  restoreScrollPosition(cache: HyperScrollerCache): void;
+  saveScrollPosition(cache: HyperScrollerCache): void;
 
   // State
   state: {
@@ -95,14 +96,14 @@ interface HyperScrollerController {
 
   scrollerRef: React.RefObject<HTMLDivElement>;
 
-  cacheKey: string;
+  cache: HyperScrollerCache;
 
   scrollRestoration: boolean;
 }
 
 export function useHyperScrollerController({
   estimatedItemHeight,
-  cacheKey,
+  cache,
   targetView = window,
   overscanItemCount = 2,
   initialScrollPosition = 0,
@@ -125,20 +126,19 @@ export function useHyperScrollerController({
   const itemsRefs = useRef<Record<number, React.RefObject<HTMLElement>>>({});
 
   // Cache
-  const [internalCacheKey, setInternalCacheKey] = useState(
-    () => cacheKey ?? HyperScrollerCacheService.getNextId(),
+  const [internalCache, setInternalCache] = useState(
+    () => cache ?? HyperScrollerCache.getOrCreateCache(),
   );
-  const cache = HyperScrollerCacheService.getCache(internalCacheKey);
 
   useEffect(() => {
-    let key = cacheKey;
+    let newInternalCache = cache;
 
-    if (!key) {
-      key = HyperScrollerCacheService.getNextId();
+    if (!newInternalCache) {
+      newInternalCache = HyperScrollerCache.getOrCreateCache();
     }
 
-    setInternalCacheKey(key);
-  }, [cacheKey]);
+    setInternalCache(newInternalCache);
+  }, [cache]);
 
   // Scroll restoration
   const scrollToInitialPosition = useCallback(() => {
@@ -146,8 +146,7 @@ export function useHyperScrollerController({
   }, [targetView, initialScrollPosition]);
 
   const restoreScrollPosition = useCallback(
-    (cacheKey: string) => {
-      const cache = HyperScrollerCacheService.getCache(cacheKey);
+    (cache: HyperScrollerCache) => {
       scrollTo(targetView, 0, cache.scrollPosition);
     },
     [targetView],
@@ -162,8 +161,7 @@ export function useHyperScrollerController({
   }, [targetView, initialScrollPosition]);
 
   const saveScrollPosition = useCallback(
-    (cacheKey: string) => {
-      const cache = HyperScrollerCacheService.getCache(cacheKey);
+    (cache: HyperScrollerCache) => {
       cache.scrollPosition = getScrollPosition();
     },
     [getScrollPosition],
@@ -177,11 +175,11 @@ export function useHyperScrollerController({
 
   const calculateRowHeight = useCallback(
     (index: number) => {
-      const height = cache[index];
+      const height = internalCache.getItemByIndex(index)?.height;
 
       return height || estimatedItemHeight;
     },
-    [cache, estimatedItemHeight],
+    [internalCache, estimatedItemHeight],
   );
 
   const updateProjection = useCallback(() => {
@@ -329,7 +327,7 @@ export function useHyperScrollerController({
     createItemRef,
 
     // Cache
-    cacheKey: internalCacheKey,
+    cache: internalCache,
   };
 }
 
@@ -344,7 +342,7 @@ function HyperScroller({ children, controller }: HyperScrollerProps) {
     createItemRef,
     updateProjection,
     resetState,
-    cacheKey,
+    cache,
     scrollerRef,
     saveScrollPosition,
     restoreScrollPosition,
@@ -361,20 +359,20 @@ function HyperScroller({ children, controller }: HyperScrollerProps) {
   useEffect(() => {
     resetState();
     updateProjection();
-  }, [cacheKey, updateProjection, resetState]);
+  }, [cache.key, updateProjection, resetState]);
 
   useLayoutEffect(() => {
     if (scrollRestoration) {
-      restoreScrollPosition(cacheKey);
+      restoreScrollPosition(cache);
     } else {
       scrollToInitialPosition();
     }
 
     return () => {
-      saveScrollPosition(cacheKey);
+      saveScrollPosition(cache);
     };
   }, [
-    cacheKey,
+    cache,
     scrollRestoration,
     scrollToInitialPosition,
     saveScrollPosition,
@@ -385,21 +383,50 @@ function HyperScroller({ children, controller }: HyperScrollerProps) {
   const projection = [];
 
   if (itemCount) {
-    for (let i = firstIndex; i <= lastIndex; i++) {
-      const item = items[i];
-      const ref = createItemRef(i);
+    for (let index = firstIndex; index <= lastIndex; index++) {
+      const item = items[index];
+      const ref = createItemRef(index);
+      let key = `@@${index}`;
       let projectionItem: JSX.Element;
 
       if (isHyperScrollerItemChild(item)) {
+        key = String(sanitizeReactKey(item.key) ?? item.props.hyperId ?? key);
+
         projectionItem = React.cloneElement(item, {
           ...item.props,
-          index: i,
+          index,
           ref: combineRefs(item.props.ref, ref),
-          key: i,
+          key,
+          hyperId: key,
         });
+      } else if (isItemChildWithProps(item)) {
+        const { hyperId, ...props } = item.props;
+        key = String(sanitizeReactKey(item.key) ?? hyperId ?? key);
+
+        const clonedItem = React.cloneElement(item, {
+          ...props,
+        });
+
+        projectionItem = (
+          <HyperScrollerItem
+            key={key}
+            as="div"
+            index={index}
+            hyperId={key}
+            ref={createItemRef(index)}
+          >
+            {clonedItem}
+          </HyperScrollerItem>
+        );
       } else {
         projectionItem = (
-          <HyperScrollerItem key={i} as="div" index={i} ref={createItemRef(i)}>
+          <HyperScrollerItem
+            key={key}
+            as="div"
+            index={index}
+            hyperId={key}
+            ref={createItemRef(index)}
+          >
             {item}
           </HyperScrollerItem>
         );
@@ -420,16 +447,25 @@ function HyperScroller({ children, controller }: HyperScrollerProps) {
 
 interface HyperScrollerItemProps {
   children: React.ReactNode;
+
+  /**
+   * You can use `hyperId` or React's `key`. These will allow you to use the advanced
+   * features of HyperScroller such as scrolling to an specific item without knowing its
+   * index.
+   *
+   * @defaultValue `key` or `@@${index}`
+   */
+  hyperId?: string;
   as?: React.ElementType;
   index?: number;
 }
 
 const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
   function HyperScrollerItem(
-    { children, as: Component = 'div', index = -1 },
+    { children, as: Component = 'div', index = -1, hyperId = `@@${index}` },
     forwardedRef,
   ) {
-    const { cacheKey, scheduleUpdateProjection } =
+    const { cache, scheduleUpdateProjection } =
       useContext(HyperScrollerContext);
     const innerRef = useRef<HTMLElement>(null);
 
@@ -441,7 +477,6 @@ const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
       }
 
       let unmounted = false;
-      const cache = HyperScrollerCacheService.getCache(cacheKey);
 
       const resizeObserver = new ResizeObserver((entries) => {
         if (unmounted) {
@@ -455,7 +490,7 @@ const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
         }
 
         const { height } = entry.contentRect;
-        cache[index] = height;
+        cache.setItem(hyperId, index, height);
 
         scheduleUpdateProjection();
       });
@@ -466,7 +501,7 @@ const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
         unmounted = true;
         resizeObserver.disconnect();
       };
-    }, [innerRef, cacheKey, index, scheduleUpdateProjection]);
+    }, [innerRef, cache, index, hyperId, scheduleUpdateProjection]);
 
     return (
       <Component ref={combineRefs(innerRef, forwardedRef)}>
@@ -489,4 +524,11 @@ function isHyperScrollerItemChild(
   React.ComponentPropsWithRef<typeof HyperScrollerItem>
 > {
   return item?.type?.displayName === HyperScrollerItem.displayName;
+}
+
+function isItemChildWithProps(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  item: any,
+): item is React.ReactElement<unknown> {
+  return item?.type?.displayName !== HyperScrollerItem.displayName;
 }
