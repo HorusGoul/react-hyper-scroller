@@ -8,6 +8,9 @@ function App() {
 
       <ul>
         <li>
+          <a href="/demos/basic.html">Basic</a>
+        </li>
+        <li>
           <a href="/demos/scroll-restoration.html">Scroll restoration</a>
         </li>
         <li>

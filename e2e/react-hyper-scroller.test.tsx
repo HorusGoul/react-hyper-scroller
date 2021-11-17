@@ -1,11 +1,11 @@
-import { ITEMS_TO_GENERATE } from '../src/utils';
+import { DEFAULT_ITEMS_TO_GENERATE } from '../src/utils';
 import { Page } from 'puppeteer';
 
 jest.setTimeout(32000);
 
 describe('Window as targetView', () => {
   test('HyperScroller loads correctly', async () => {
-    await page.goto('http://localhost:3000/demos/scroll-restoration.html');
+    await page.goto('http://localhost:3000/demos/basic.html');
 
     const html = await page.$eval('#root', (e) => e.innerHTML);
     expect(html).toContain(`Item 0`);
@@ -18,7 +18,7 @@ describe('Window as targetView', () => {
 
     await page.$eval('#root', (e) => e.innerHTML);
 
-    for (let i = 0; i < ITEMS_TO_GENERATE; i++) {
+    for (let i = 0; i < DEFAULT_ITEMS_TO_GENERATE; i++) {
       const endReached = await page.evaluate(() => {
         if (window.scrollY + window.innerHeight >= document.body.offsetHeight) {
           return true;
@@ -35,7 +35,7 @@ describe('Window as targetView', () => {
     }
 
     const html = await page.$eval('#root', (e) => e.innerHTML);
-    expect(html).toContain(`Item ${ITEMS_TO_GENERATE - 1}`);
+    expect(html).toContain(`Item ${DEFAULT_ITEMS_TO_GENERATE - 1}`);
   });
 
   test('scroll restoration works', async () => {
@@ -146,7 +146,7 @@ describe('HTMLElement as targetView', () => {
     await page.$eval('#root', (e) => e.innerHTML);
     await delay(100);
 
-    for (let i = 0; i < ITEMS_TO_GENERATE; i++) {
+    for (let i = 0; i < DEFAULT_ITEMS_TO_GENERATE; i++) {
       const endReached = await page.evaluate(() => {
         const targetView = document.querySelector(
           '#target-view',
@@ -170,7 +170,7 @@ describe('HTMLElement as targetView', () => {
     }
 
     const html = await page.$eval('#root', (e) => e.innerHTML);
-    expect(html).toContain(`Item ${ITEMS_TO_GENERATE - 1}`);
+    expect(html).toContain(`Item ${DEFAULT_ITEMS_TO_GENERATE - 1}`);
   });
 
   test('scroll restoration works', async () => {
