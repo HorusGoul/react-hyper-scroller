@@ -78,6 +78,15 @@ interface UseHyperScrollerParams {
   scrollRestoration?: boolean;
 }
 
+interface ScrollToItemOptions {
+  /**
+   * Adjustment to the final scroll position.
+   *
+   * @defaultValue 0
+   */
+  top?: number;
+}
+
 interface HyperScrollerController {
   setItemCount(itemsCount: number): void;
   createItemRef(index: number): React.RefObject<HTMLElement>;
@@ -87,7 +96,7 @@ interface HyperScrollerController {
   scrollToInitialPosition(): void;
   restoreScrollPosition(cache: HyperScrollerCache): void;
   saveScrollPosition(cache: HyperScrollerCache): void;
-  scrollToItem(itemKey: string): void;
+  scrollToItem(itemKey: string, options?: ScrollToItemOptions): void;
 
   // State
   state: {
@@ -183,7 +192,7 @@ export function useHyperScrollerController({
   }, []);
 
   const scrollToItem = useCallback(
-    (key: string, topAdjustment = 100) => {
+    (key: string, { top = 0 }: ScrollToItemOptions = {}) => {
       const view = isWindow(targetView) ? targetView : targetView.current;
 
       if (!view) {
@@ -214,7 +223,7 @@ export function useHyperScrollerController({
           const box = element.getBoundingClientRect();
 
           const currentPosition = getScrollPosition();
-          const newPosition = currentPosition + box.top - topAdjustment;
+          const newPosition = currentPosition + box.top - top;
           const viewScrollHeight = getViewScrollHeight(view);
           const viewHeight = getViewHeight(view);
 
@@ -227,7 +236,7 @@ export function useHyperScrollerController({
             return;
           }
 
-          if (box.top !== topAdjustment) {
+          if (box.top !== top) {
             scrollTo(targetView, 0, newPosition).then(() =>
               recursiveScrollToRef(),
             );

@@ -11,9 +11,10 @@ const items = createItems();
 function App() {
   const [itemId, setItemId] = React.useState('id-0');
 
+  const targetViewRef = React.useRef<HTMLDivElement>(null);
   const controller = useHyperScrollerController({
     estimatedItemHeight: PRECALCULATED_ITEM_HEIGHT,
-    targetView: window,
+    targetView: targetViewRef,
     cache: HyperScrollerCache.getOrCreateCache('scroll-to-item'),
   });
 
@@ -43,13 +44,15 @@ function App() {
         </button>
       </div>
 
-      <HyperScroller controller={controller}>
-        {items.map((item) => (
-          <div data-testid={`item-${item.id}`} key={item.id}>
-            <div style={{ height: item.height }}>{item.text}</div>
-          </div>
-        ))}
-      </HyperScroller>
+      <div ref={targetViewRef} style={{ overflow: 'auto', height: 400 }}>
+        <HyperScroller controller={controller}>
+          {items.map((item) => (
+            <div data-testid={`item-${item.id}`} key={item.id}>
+              <div style={{ height: item.height }}>{item.text}</div>
+            </div>
+          ))}
+        </HyperScroller>
+      </div>
     </>
   );
 }

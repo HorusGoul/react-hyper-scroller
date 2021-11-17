@@ -288,6 +288,31 @@ describe('HTMLElement as targetView', () => {
     html = await page.$eval('#root', (e) => e.innerHTML);
     expect(html).toContain(`Item 1`);
   });
+
+  test.each(['0', '10', '20', '40', '60', '99'])(
+    'scroll to item %s works',
+    async (id) => {
+      await page.goto('http://localhost:3000/demos/scroll-to-item-target.html');
+
+      let html = await page.$eval('#root', (e) => e.innerHTML);
+      expect(html).toContain(`Item 0`);
+
+      await clearInput('#item-id');
+      await page.type('#item-id', `id-${id}`);
+      await click('#scroll-to-item-btn');
+      await delay(100);
+
+      html = await page.$eval('#root', (e) => e.innerHTML);
+      expect(html).toContain(`Item ${id}`);
+
+      const top = await page.$eval(`[data-testid="item-id-${id}"]`, (e) => {
+        const top = e.getBoundingClientRect().top;
+        return top;
+      });
+
+      expect(top).toBeGreaterThanOrEqual(0);
+    },
+  );
 });
 
 function getScrollY(selector?: string) {
