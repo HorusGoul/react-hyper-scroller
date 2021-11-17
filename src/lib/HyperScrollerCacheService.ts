@@ -1,15 +1,15 @@
-export interface IVirtualScrollerCache {
+export interface IHyperScrollerCache {
   scrollPosition: number;
   [index: number]: number;
 }
 
-export interface IVirtualScrollerCacheList {
-  [key: string]: IVirtualScrollerCache;
+export interface IHyperScrollerCacheList {
+  [key: string]: IHyperScrollerCache;
 }
 
-export class VirtualScrollerCacheService {
+export class HyperScrollerCacheService {
   private idSequence = 0;
-  private cacheList: IVirtualScrollerCacheList = {};
+  private cacheList: IHyperScrollerCacheList = {};
 
   public getCache(key: string) {
     const cache = this.cacheList[key];
@@ -38,4 +38,4 @@ export class VirtualScrollerCacheService {
   }
 }
 
-export default new VirtualScrollerCacheService();
+export default new HyperScrollerCacheService();

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import HyperScroller, { useVirtualScrollerController } from '../lib';
+import HyperScroller, { useHyperScrollerController } from '../lib';
 import { createItems, PRECALCULATED_ITEM_HEIGHT } from '../utils';
 
 const items = createItems();
@@ -13,7 +13,7 @@ function App() {
     setShowing(!showing);
   }
 
-  const controller = useVirtualScrollerController({
+  const controller = useHyperScrollerController({
     estimatedItemHeight: PRECALCULATED_ITEM_HEIGHT,
     targetView: window,
     scrollRestoration: true,

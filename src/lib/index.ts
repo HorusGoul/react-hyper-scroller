@@ -1,2 +1,2 @@
-export * from './VirtualScroller';
-export { default } from './VirtualScroller';
+export * from './HyperScroller';
+export { default } from './HyperScroller';

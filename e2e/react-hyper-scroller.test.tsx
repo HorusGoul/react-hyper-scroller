@@ -4,7 +4,7 @@ import { Page } from 'puppeteer';
 jest.setTimeout(32000);
 
 describe('Window as targetView', () => {
-  test('VirtualScroller loads correctly', async () => {
+  test('HyperScroller loads correctly', async () => {
     await page.goto('http://localhost:3000/demos/scroll-restoration.html');
 
     const html = await page.$eval('#root', (e) => e.innerHTML);
@@ -131,7 +131,7 @@ describe('Window as targetView', () => {
 });
 
 describe('HTMLElement as targetView', () => {
-  test('VirtualScroller loads correctly', async () => {
+  test('HyperScroller loads correctly', async () => {
     await page.goto('http://localhost:3000/demos/different-target.html');
 
     const html = await page.$eval('#root', (e) => e.innerHTML);

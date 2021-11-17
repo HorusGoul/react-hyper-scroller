@@ -30,7 +30,7 @@ npm install --save react-hyper-scroller
 
 ## Usage
 
-- [Props](https://horusgoul.github.io/react-hyper-scroller/interfaces/ivirtualscrollerprops.html)
+- [Props](https://horusgoul.github.io/react-hyper-scroller/interfaces/ihyperscrollerprops.html)
 
 ## Contributors
 

@@ -1,6 +1,6 @@
-export type VirtualScrollerTargetView = React.RefObject<HTMLElement> | Window;
+export type HyperScrollerTargetView = React.RefObject<HTMLElement> | Window;
 
-export const defaultVirtualScrollerState = {
+export const defaultHyperScrollerState = {
   firstIndex: 0,
   lastIndex: 0,
   paddingBottom: 0,
@@ -8,7 +8,7 @@ export const defaultVirtualScrollerState = {
 };
 
 export function isWindow(
-  targetView: VirtualScrollerTargetView,
+  targetView: HyperScrollerTargetView,
 ): targetView is Window {
   return window === targetView;
 }
@@ -18,7 +18,7 @@ export function isHTMLElement(view: HTMLElement | Window): view is HTMLElement {
 }
 
 export function scrollTo(
-  targetView: VirtualScrollerTargetView,
+  targetView: HyperScrollerTargetView,
   x: number,
   y: number,
 ) {

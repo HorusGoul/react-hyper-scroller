@@ -10,24 +10,24 @@ import React, {
 } from 'react';
 import {
   combineRefs,
-  defaultVirtualScrollerState,
+  defaultHyperScrollerState,
   isHTMLElement,
   isWindow,
   scrollTo,
-  VirtualScrollerTargetView,
+  HyperScrollerTargetView,
 } from './utils';
-import VirtualScrollerCacheService from './VirtualScrollerCacheService';
+import HyperScrollerCacheService from './HyperScrollerCacheService';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-const VirtualScrollerContext = createContext<VirtualScrollerController>(null);
+const HyperScrollerContext = createContext<HyperScrollerController>(null);
 
 interface HyperScroller {
-  (props: VirtualScrollerProps): React.ReactElement;
-  Item: typeof VirtualScrollerItem;
+  (props: HyperScrollerProps): React.ReactElement;
+  Item: typeof HyperScrollerItem;
 }
 
-interface UseVirtualScrollerParams {
+interface UseHyperScrollerParams {
   /**
    * Estimated height that will be used on initial
    * render for each item.
@@ -35,9 +35,9 @@ interface UseVirtualScrollerParams {
   estimatedItemHeight: number;
 
   /**
-   * Cache key on VirtualScrollerCacheService.
+   * Cache key on HyperScrollerCacheService.
    *
-   * @defaultValue `VirtualScrollerCacheService.getNextId()`
+   * @defaultValue `HyperScrollerCacheService.getNextId()`
    */
   cacheKey?: string;
 
@@ -54,7 +54,7 @@ interface UseVirtualScrollerParams {
    *
    * @defaultValue `window`
    */
-  targetView?: VirtualScrollerTargetView;
+  targetView?: HyperScrollerTargetView;
 
   /**
    * Initial scroll position.
@@ -75,7 +75,7 @@ interface UseVirtualScrollerParams {
   scrollRestoration?: boolean;
 }
 
-interface VirtualScrollerController {
+interface HyperScrollerController {
   setItemCount(itemsCount: number): void;
   createItemRef(index: number): React.RefObject<HTMLElement>;
   updateProjection(): void;
@@ -100,26 +100,24 @@ interface VirtualScrollerController {
   scrollRestoration: boolean;
 }
 
-export function useVirtualScrollerController({
+export function useHyperScrollerController({
   estimatedItemHeight,
   cacheKey,
   targetView = window,
   overscanItemCount = 2,
   initialScrollPosition = 0,
   scrollRestoration = false,
-}: UseVirtualScrollerParams): VirtualScrollerController {
+}: UseHyperScrollerParams): HyperScrollerController {
   const [itemCount, setItemCount] = useState(0);
 
   // State
-  const [state, setState] = useState<VirtualScrollerController['state']>(
-    () => ({
-      ...defaultVirtualScrollerState,
-    }),
-  );
+  const [state, setState] = useState<HyperScrollerController['state']>(() => ({
+    ...defaultHyperScrollerState,
+  }));
 
   const resetState = useCallback(() => {
     setState({
-      ...defaultVirtualScrollerState,
+      ...defaultHyperScrollerState,
     });
   }, []);
 
@@ -128,15 +126,15 @@ export function useVirtualScrollerController({
 
   // Cache
   const [internalCacheKey, setInternalCacheKey] = useState(
-    () => cacheKey ?? VirtualScrollerCacheService.getNextId(),
+    () => cacheKey ?? HyperScrollerCacheService.getNextId(),
   );
-  const cache = VirtualScrollerCacheService.getCache(internalCacheKey);
+  const cache = HyperScrollerCacheService.getCache(internalCacheKey);
 
   useEffect(() => {
     let key = cacheKey;
 
     if (!key) {
-      key = VirtualScrollerCacheService.getNextId();
+      key = HyperScrollerCacheService.getNextId();
     }
 
     setInternalCacheKey(key);
@@ -149,7 +147,7 @@ export function useVirtualScrollerController({
 
   const restoreScrollPosition = useCallback(
     (cacheKey: string) => {
-      const cache = VirtualScrollerCacheService.getCache(cacheKey);
+      const cache = HyperScrollerCacheService.getCache(cacheKey);
       scrollTo(targetView, 0, cache.scrollPosition);
     },
     [targetView],
@@ -165,7 +163,7 @@ export function useVirtualScrollerController({
 
   const saveScrollPosition = useCallback(
     (cacheKey: string) => {
-      const cache = VirtualScrollerCacheService.getCache(cacheKey);
+      const cache = HyperScrollerCacheService.getCache(cacheKey);
       cache.scrollPosition = getScrollPosition();
     },
     [getScrollPosition],
@@ -335,12 +333,12 @@ export function useVirtualScrollerController({
   };
 }
 
-interface VirtualScrollerProps {
+interface HyperScrollerProps {
   children: React.ReactNode;
-  controller: VirtualScrollerController;
+  controller: HyperScrollerController;
 }
 
-function VirtualScroller({ children, controller }: VirtualScrollerProps) {
+function HyperScroller({ children, controller }: HyperScrollerProps) {
   const {
     setItemCount,
     createItemRef,
@@ -392,7 +390,7 @@ function VirtualScroller({ children, controller }: VirtualScrollerProps) {
       const ref = createItemRef(i);
       let projectionItem: JSX.Element;
 
-      if (isVirtualScrollerItemChild(item)) {
+      if (isHyperScrollerItemChild(item)) {
         projectionItem = React.cloneElement(item, {
           ...item.props,
           index: i,
@@ -401,14 +399,9 @@ function VirtualScroller({ children, controller }: VirtualScrollerProps) {
         });
       } else {
         projectionItem = (
-          <VirtualScrollerItem
-            key={i}
-            as="div"
-            index={i}
-            ref={createItemRef(i)}
-          >
+          <HyperScrollerItem key={i} as="div" index={i} ref={createItemRef(i)}>
             {item}
-          </VirtualScrollerItem>
+          </HyperScrollerItem>
         );
       }
 
@@ -417,28 +410,27 @@ function VirtualScroller({ children, controller }: VirtualScrollerProps) {
   }
 
   return (
-    <VirtualScrollerContext.Provider value={controller}>
+    <HyperScrollerContext.Provider value={controller}>
       <div ref={scrollerRef} style={{ paddingTop, paddingBottom }}>
         {projection}
       </div>
-    </VirtualScrollerContext.Provider>
+    </HyperScrollerContext.Provider>
   );
 }
 
-interface VirtualScrollerItemProps {
+interface HyperScrollerItemProps {
   children: React.ReactNode;
   as?: React.ElementType;
   index?: number;
 }
 
-const VirtualScrollerItem = forwardRef<HTMLElement, VirtualScrollerItemProps>(
-  function VirtualScrollerItem(
+const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
+  function HyperScrollerItem(
     { children, as: Component = 'div', index = -1 },
     forwardedRef,
   ) {
-    const { cacheKey, scheduleUpdateProjection } = useContext(
-      VirtualScrollerContext,
-    );
+    const { cacheKey, scheduleUpdateProjection } =
+      useContext(HyperScrollerContext);
     const innerRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
@@ -449,7 +441,7 @@ const VirtualScrollerItem = forwardRef<HTMLElement, VirtualScrollerItemProps>(
       }
 
       let unmounted = false;
-      const cache = VirtualScrollerCacheService.getCache(cacheKey);
+      const cache = HyperScrollerCacheService.getCache(cacheKey);
 
       const resizeObserver = new ResizeObserver((entries) => {
         if (unmounted) {
@@ -484,17 +476,17 @@ const VirtualScrollerItem = forwardRef<HTMLElement, VirtualScrollerItemProps>(
   },
 );
 
-VirtualScrollerItem.displayName = 'VirtualScrollerItem';
+HyperScrollerItem.displayName = 'HyperScrollerItem';
 
-VirtualScroller.Item = VirtualScrollerItem;
+HyperScroller.Item = HyperScrollerItem;
 
-export default VirtualScroller as HyperScroller;
+export default HyperScroller as HyperScroller;
 
-function isVirtualScrollerItemChild(
+function isHyperScrollerItemChild(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   item: any,
 ): item is React.ReactElement<
-  React.ComponentPropsWithRef<typeof VirtualScrollerItem>
+  React.ComponentPropsWithRef<typeof HyperScrollerItem>
 > {
-  return item?.type?.displayName === VirtualScrollerItem.displayName;
+  return item?.type?.displayName === HyperScrollerItem.displayName;
 }

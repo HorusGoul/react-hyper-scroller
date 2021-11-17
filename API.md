@@ -4,28 +4,28 @@ Example:
 
 ```tsx
 function List() {
-  const listController = useVirtualScroller({
+  const listController = useHyperScroller({
     estimatedItemHeight: 50,
   });
 
   return (
-    <VirtualScroller {...listController}>
-      <VirtualScroller.Item as="div" id="heading-1">
+    <HyperScroller {...listController}>
+      <HyperScroller.Item as="div" id="heading-1">
         <h1>Heading</h1>
 
         <p>Paragraph</p>
-      </VirtualScroller.Item>
+      </HyperScroller.Item>
 
       {items.map((item) => (
-        <VirtualScroller.Item id={item.id}>
+        <HyperScroller.Item id={item.id}>
           <p>{item.text}</p>
-        </VirtualScroller.Item>
+        </HyperScroller.Item>
       ))}
 
-      <VirtualScroller.Item as="h2">Sub-heading</VirtualScroller.Item>
+      <HyperScroller.Item as="h2">Sub-heading</HyperScroller.Item>
 
-      <VirtualScroller.Item as="p">Paragraph</VirtualScroller.Item>
-    </VirtualScroller>
+      <HyperScroller.Item as="p">Paragraph</HyperScroller.Item>
+    </HyperScroller>
   );
 }
 ```
