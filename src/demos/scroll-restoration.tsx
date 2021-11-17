@@ -1,14 +1,9 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { useVirtualScroller, VirtualScroller } from '../lib/index';
-import {
-  createItems,
-  createRowRenderer,
-  PRECALCULATED_ITEM_HEIGHT,
-} from '../utils';
+import HyperScroller, { useVirtualScrollerController } from '../lib';
+import { createItems, PRECALCULATED_ITEM_HEIGHT } from '../utils';
 
 const items = createItems();
-const rowRenderer = createRowRenderer(items);
 
 function App() {
   const [showing, setShowing] = React.useState(true);
@@ -18,8 +13,7 @@ function App() {
     setShowing(!showing);
   }
 
-  const scroller = useVirtualScroller({
-    itemCount: items.length,
+  const controller = useVirtualScrollerController({
     estimatedItemHeight: PRECALCULATED_ITEM_HEIGHT,
     targetView: window,
     scrollRestoration: true,
@@ -49,7 +43,15 @@ function App() {
         />
       </div>
 
-      {showing && <VirtualScroller {...scroller} itemRenderer={rowRenderer} />}
+      {showing && (
+        <HyperScroller controller={controller}>
+          {items.map((item) => (
+            <div data-testid={`item-${item.id}`} key={item.id}>
+              <div style={{ height: item.height }}>{item.text}</div>
+            </div>
+          ))}
+        </HyperScroller>
+      )}
     </>
   );
 }
