@@ -72,7 +72,13 @@ export function combineRefs<T>(
 
 export function sanitizeReactKey(key: React.Key | null) {
   if (key) {
-    return key.toString().slice(2);
+    key = key.toString().slice(2);
+
+    if (key === '') {
+      return null;
+    }
+
+    return key;
   }
 
   return null;
