@@ -76,6 +76,13 @@ interface UseHyperScrollerParams {
    * @defaultValue false
    */
   scrollRestoration?: boolean;
+
+  /**
+   * Measure the height of the items and cache it.
+   *
+   * @defaultValue true
+   */
+  measureItems?: boolean;
 }
 
 interface ScrollToItemOptions {
@@ -111,6 +118,8 @@ interface HyperScrollerController {
   cache: HyperScrollerCache;
 
   scrollRestoration: boolean;
+
+  measureItems: boolean;
 }
 
 export function useHyperScrollerController({
@@ -120,6 +129,7 @@ export function useHyperScrollerController({
   overscanItemCount = 2,
   initialScrollPosition = 0,
   scrollRestoration = false,
+  measureItems = true,
 }: UseHyperScrollerParams): HyperScrollerController {
   const [itemCount, setItemCount] = useState(0);
 
@@ -412,6 +422,7 @@ export function useHyperScrollerController({
 
     // Cache
     cache: internalCache,
+    measureItems,
   };
 }
 
@@ -550,6 +561,8 @@ function HyperScroller({ children, controller }: HyperScrollerProps) {
   );
 }
 
+HyperScroller.displayName = 'HyperScroller';
+
 interface HyperScrollerItemProps {
   children: React.ReactNode;
 
@@ -570,11 +583,15 @@ const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
     { children, as: Component = 'div', index = -1, hyperId = `@@${index}` },
     forwardedRef,
   ) {
-    const { cache, scheduleUpdateProjection } =
+    const { cache, scheduleUpdateProjection, measureItems } =
       useContext(HyperScrollerContext);
     const innerRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
+      if (!measureItems) {
+        return;
+      }
+
       const element = innerRef.current;
 
       if (!element) {
@@ -596,8 +613,6 @@ const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
 
         const { height } = entry.contentRect;
         cache.setItem(hyperId, index, height);
-
-        // scheduleUpdateProjection();
       });
 
       resizeObserver.observe(element);
@@ -606,7 +621,14 @@ const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
         unmounted = true;
         resizeObserver.disconnect();
       };
-    }, [innerRef, cache, index, hyperId, scheduleUpdateProjection]);
+    }, [
+      innerRef,
+      cache,
+      index,
+      hyperId,
+      scheduleUpdateProjection,
+      measureItems,
+    ]);
 
     return (
       <Component ref={combineRefs(innerRef, forwardedRef)}>
