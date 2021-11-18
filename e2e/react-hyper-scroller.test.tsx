@@ -315,6 +315,42 @@ describe('HTMLElement as targetView', () => {
   );
 });
 
+describe('measureItems: false', () => {
+  test('HyperScroller loads correctly', async () => {
+    await page.goto('http://localhost:3000/demos/basic-static-height.html');
+
+    const html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item 0`);
+    expect(html).toContain(`Item 1`);
+    expect(html).toContain(`Item 2`);
+  });
+
+  test('scrolls through the list', async () => {
+    await page.goto('http://localhost:3000/demos/basic-static-height.html');
+
+    await page.$eval('#root', (e) => e.innerHTML);
+
+    for (let i = 0; i < DEFAULT_ITEMS_TO_GENERATE; i++) {
+      const endReached = await page.evaluate(() => {
+        if (window.scrollY + window.innerHeight >= document.body.offsetHeight) {
+          return true;
+        }
+
+        return false;
+      });
+
+      if (endReached) {
+        break;
+      }
+
+      await scrollByInnerHeight(page);
+    }
+
+    const html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item ${DEFAULT_ITEMS_TO_GENERATE - 1}`);
+  });
+});
+
 function getScrollY(selector?: string) {
   return selector
     ? page.$eval(selector, (element) => element.scrollTop)
