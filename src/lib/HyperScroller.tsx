@@ -635,5 +635,5 @@ function isItemChildWithProps(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   item: any,
 ): item is React.ReactElement<unknown> {
-  return item?.type?.displayName !== HyperScrollerItem.displayName;
+  return item && item.type?.displayName !== HyperScrollerItem.displayName;
 }
