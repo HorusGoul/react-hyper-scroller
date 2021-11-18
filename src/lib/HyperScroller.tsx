@@ -305,63 +305,85 @@ export function useHyperScrollerController({
       viewport.scrollY = 0;
     }
 
-    const visibleItemsMaxTop = viewport.scrollY + viewport.height;
-    let visibleItemsHeight = 0;
-    let itemsHeightSum = 0;
     let firstIndex: number | undefined;
     let lastIndex: number | undefined;
     let paddingTop = 0;
     let paddingBottom = 0;
 
-    // TODO: Use binary search to find the first index
-    for (let i = 0; i < itemCount; i++) {
-      const prevSum = itemsHeightSum;
-      itemsHeightSum += calculateRowHeight(i);
+    if (measureItems) {
+      const visibleItemsMaxTop = viewport.scrollY + viewport.height;
+      let visibleItemsHeight = 0;
+      let itemsHeightSum = 0;
 
-      if (itemsHeightSum >= viewport.scrollY && firstIndex === undefined) {
-        paddingTop = prevSum;
-        firstIndex = i - overscanItemCount;
+      // TODO: Use binary search to find the first index
+      for (let i = 0; i < itemCount; i++) {
+        const prevSum = itemsHeightSum;
+        itemsHeightSum += calculateRowHeight(i);
 
-        if (firstIndex < 0) {
-          firstIndex = 0;
+        if (itemsHeightSum >= viewport.scrollY && firstIndex === undefined) {
+          paddingTop = prevSum;
+          firstIndex = i - overscanItemCount;
+
+          if (firstIndex < 0) {
+            firstIndex = 0;
+          }
+
+          for (let j = firstIndex; j < i; j++) {
+            paddingTop -= calculateRowHeight(j);
+          }
         }
 
-        for (let j = firstIndex; j < i; j++) {
-          paddingTop -= calculateRowHeight(j);
+        if (
+          (itemsHeightSum >= visibleItemsMaxTop && !lastIndex) ||
+          (i === itemCount - 1 && !lastIndex)
+        ) {
+          lastIndex = i + overscanItemCount;
+          visibleItemsHeight = itemsHeightSum;
+
+          if (lastIndex >= itemCount) {
+            lastIndex = itemCount - 1;
+          }
+
+          for (let j = lastIndex; j > i; j--) {
+            visibleItemsHeight += calculateRowHeight(j);
+          }
         }
       }
 
-      if (
-        (itemsHeightSum >= visibleItemsMaxTop && !lastIndex) ||
-        (i === itemCount - 1 && !lastIndex)
-      ) {
-        lastIndex = i + overscanItemCount;
-        visibleItemsHeight = itemsHeightSum;
+      paddingBottom = itemsHeightSum - visibleItemsHeight;
 
-        if (lastIndex >= itemCount) {
-          lastIndex = itemCount - 1;
-        }
-
-        for (let j = lastIndex; j > i; j--) {
-          visibleItemsHeight += calculateRowHeight(j);
-        }
+      if (paddingBottom < 0) {
+        paddingBottom = 0;
       }
+    } else {
+      // When we're not measuring items, we assume that all the items have the same height
+      const totalItemsHeightSum = itemCount * internalCache.estimatedItemHeight;
+      const realEstimatedItemHeight = totalItemsHeightSum / itemCount;
+
+      firstIndex = Math.max(
+        Math.floor(viewport.scrollY / realEstimatedItemHeight) -
+          overscanItemCount,
+        0,
+      );
+      lastIndex = Math.min(
+        Math.ceil(
+          (viewport.scrollY + viewport.height) / realEstimatedItemHeight,
+        ) + overscanItemCount,
+        itemCount - 1,
+      );
+      paddingTop = firstIndex * realEstimatedItemHeight;
+
+      const itemsLeft = itemCount - lastIndex - 1;
+      paddingBottom = itemsLeft * realEstimatedItemHeight;
     }
 
-    paddingBottom = itemsHeightSum - visibleItemsHeight;
-
-    if (paddingBottom < 0) {
-      paddingBottom = 0;
-    }
-
-    setState((currentState) => ({
-      ...currentState,
+    setState({
       firstIndex: firstIndex ?? 0,
       lastIndex: lastIndex ?? 0,
       paddingBottom,
       paddingTop,
-    }));
-  }, [calculateRowHeight, overscanItemCount, itemCount, targetView]);
+    });
+  }, [internalCache, overscanItemCount, itemCount, targetView, measureItems]);
 
   const scheduleUpdateProjectionRAFRef = useRef<number>();
 
