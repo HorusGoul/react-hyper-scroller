@@ -13,17 +13,18 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/react-hyper-scroller.umd.js",
-  "module": "./dist/react-hyper-scroller.es.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/react-hyper-scroller.es.js",
-      "require": "./dist/react-hyper-scroller.umd.js"
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
     }
   },
   "scripts": {
-    "dev": "vite --config ./config/vite-dev.config.ts",
-    "build": "tsc && vite build --config ./config/vite-build.config.ts",
+    "dev": "vite",
+    "build": "tsup",
     "test:e2e": "jest --config jest.e2e.js",
     "typecheck": "tsc --noEmit",
     "lint:base": "eslint --ext .js,.json,.ts,.tsx",
@@ -63,6 +64,7 @@
     "prettier": "^2.4.1",
     "simple-pre-commit": "^1.2.1",
     "ts-jest": "^27.0.7",
+    "tsup": "^5.7.2",
     "typescript": "^4.3.2",
     "vite": "^2.6.4",
     "vite-plugin-istanbul": "^2.2.2"

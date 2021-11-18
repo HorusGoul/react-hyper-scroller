@@ -5,19 +5,19 @@ import istanbulPlugin from 'vite-plugin-istanbul';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  root: path.resolve(__dirname, '../src'),
+  root: path.resolve(__dirname, './src'),
 
   build: {
-    outDir: '../dist',
+    outDir: './dist',
 
     rollupOptions: {
       external: ['react', 'react-dom', 'react/jsx-runtime', 'object-assign'],
 
       input: {
-        main: path.resolve(__dirname, '../src/index.html'),
+        main: path.resolve(__dirname, './src/index.html'),
         scrollRestoration: path.resolve(
           __dirname,
-          '../src/demos/scroll-restoration.html',
+          './src/demos/scroll-restoration.html',
         ),
       },
 
