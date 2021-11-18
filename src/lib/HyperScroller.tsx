@@ -383,7 +383,14 @@ export function useHyperScrollerController({
       paddingBottom,
       paddingTop,
     });
-  }, [internalCache, overscanItemCount, itemCount, targetView, measureItems]);
+  }, [
+    internalCache,
+    overscanItemCount,
+    itemCount,
+    targetView,
+    measureItems,
+    calculateRowHeight,
+  ]);
 
   const scheduleUpdateProjectionRAFRef = useRef<number>();
 
