@@ -1,21 +1,13 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import HyperScroller, {
-  HyperScrollerCache,
-  useHyperScrollerController,
-} from '../lib';
+import HyperScroller, { HyperScrollerCache, useHyperScrollerRef } from '../lib';
 import { createItems, PRECALCULATED_ITEM_HEIGHT } from '../utils';
 
 const items = createItems();
 
 function App() {
   const [itemId, setItemId] = React.useState('id-99');
-
-  const controller = useHyperScrollerController({
-    estimatedItemHeight: PRECALCULATED_ITEM_HEIGHT,
-    targetView: window,
-    cache: HyperScrollerCache.getOrCreateCache('scroll-to-item'),
-  });
+  const hyperScrollerRef = useHyperScrollerRef();
 
   return (
     <>
@@ -37,13 +29,19 @@ function App() {
         <button
           id="scroll-to-item-btn"
           data-testid="scroll-to-item-btn"
-          onClick={() => controller.scrollToItem(itemId, { top: 100 })}
+          onClick={() =>
+            hyperScrollerRef.current?.scrollToItem(itemId, { top: 100 })
+          }
         >
           Scroll to item
         </button>
       </div>
 
-      <HyperScroller controller={controller}>
+      <HyperScroller
+        ref={hyperScrollerRef}
+        estimatedItemHeight={PRECALCULATED_ITEM_HEIGHT}
+        cache={HyperScrollerCache.getOrCreateCache('scroll-to-item')}
+      >
         {items.map((item) => (
           <div data-testid={`item-${item.id}`} key={item.id}>
             <div style={{ height: item.height }}>{item.text}</div>

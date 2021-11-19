@@ -1,9 +1,6 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import HyperScroller, {
-  HyperScrollerCache,
-  useHyperScrollerController,
-} from '../lib';
+import HyperScroller, { HyperScrollerCache, useHyperScrollerRef } from '../lib';
 import { createItems, PRECALCULATED_ITEM_HEIGHT } from '../utils';
 
 const items = createItems();
@@ -12,11 +9,7 @@ function App() {
   const [itemId, setItemId] = React.useState('id-0');
 
   const targetViewRef = React.useRef<HTMLDivElement>(null);
-  const controller = useHyperScrollerController({
-    estimatedItemHeight: PRECALCULATED_ITEM_HEIGHT,
-    targetView: targetViewRef,
-    cache: HyperScrollerCache.getOrCreateCache('scroll-to-item'),
-  });
+  const hyperScroller = useHyperScrollerRef();
 
   return (
     <>
@@ -38,14 +31,21 @@ function App() {
         <button
           id="scroll-to-item-btn"
           data-testid="scroll-to-item-btn"
-          onClick={() => controller.scrollToItem(itemId, { top: 100 })}
+          onClick={() =>
+            hyperScroller.current?.scrollToItem(itemId, { top: 100 })
+          }
         >
           Scroll to item
         </button>
       </div>
 
       <div ref={targetViewRef} style={{ overflow: 'auto', height: 400 }}>
-        <HyperScroller controller={controller}>
+        <HyperScroller
+          ref={hyperScroller}
+          estimatedItemHeight={PRECALCULATED_ITEM_HEIGHT}
+          targetView={targetViewRef}
+          cache={HyperScrollerCache.getOrCreateCache('scroll-to-item')}
+        >
           {items.map((item) => (
             <div data-testid={`item-${item.id}`} key={item.id}>
               <div style={{ height: item.height }}>{item.text}</div>

@@ -1,15 +1,11 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import HyperScroller, { useHyperScrollerController } from '../lib';
+import HyperScroller from '../lib';
 import { createItems, PRECALCULATED_ITEM_HEIGHT } from '../utils';
 
 const items = createItems();
 
 function App() {
-  const controller = useHyperScrollerController({
-    estimatedItemHeight: PRECALCULATED_ITEM_HEIGHT,
-  });
-
   const itemRenderer = (item: typeof items[number]) => (
     <div data-testid={`item-${item.id}`} key={item.id}>
       <div style={{ height: item.height }}>{item.text}</div>
@@ -18,7 +14,7 @@ function App() {
 
   return (
     <>
-      <HyperScroller controller={controller}>
+      <HyperScroller estimatedItemHeight={PRECALCULATED_ITEM_HEIGHT}>
         <h1>Basic Demo of the HyperScroller component</h1>
 
         <div style={{ padding: '16px 0' }}>

@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useImperativeHandle,
   useLayoutEffect,
   useRef,
   useState,
@@ -25,8 +26,10 @@ import { HyperScrollerCache } from './HyperScrollerCache';
 // @ts-ignore
 const HyperScrollerContext = createContext<HyperScrollerController>(null);
 
-interface HyperScroller {
-  (props: HyperScrollerProps): React.ReactElement;
+interface HyperScroller
+  extends React.ForwardRefExoticComponent<
+    HyperScrollerProps & React.RefAttributes<unknown>
+  > {
   Item: typeof HyperScrollerItem;
 }
 
@@ -124,7 +127,7 @@ interface HyperScrollerController {
   measureItems: boolean;
 }
 
-export function useHyperScrollerController({
+function useHyperScrollerController({
   estimatedItemHeight,
   cache,
   targetView = window,
@@ -501,142 +504,162 @@ export function useHyperScrollerController({
   };
 }
 
-interface HyperScrollerProps {
+interface HyperScrollerProps extends UseHyperScrollerParams {
   children: React.ReactNode;
-  controller: HyperScrollerController;
 }
 
-function HyperScroller({ children, controller }: HyperScrollerProps) {
-  const {
-    setItemCount,
-    createItemRef,
-    updateProjection,
-    resetState,
-    cache,
-    scrollerRef,
-    saveScrollPosition,
-    restoreScrollPosition,
-    scrollToInitialPosition,
-    scrollRestoration,
-  } = controller;
-  const items = React.Children.toArray(children);
-  const itemCount = items.length;
+export interface HyperScrollerRef {
+  scrollToItem: HyperScrollerController['scrollToItem'];
+}
 
-  useEffect(() => {
-    React.Children.forEach(children, (child, index) => {
-      let key = `@@${index}`;
+export function useHyperScrollerRef() {
+  return useRef<HyperScrollerRef>(null);
+}
 
-      if (isItemChildWithProps(child)) {
-        key = String(child.key ?? child.props.hyperId ?? key);
-      }
+const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
+  function HyperScroller({ children, ...params }, ref) {
+    const controller = useHyperScrollerController(params);
+    const {
+      setItemCount,
+      createItemRef,
+      updateProjection,
+      resetState,
+      cache,
+      scrollerRef,
+      saveScrollPosition,
+      restoreScrollPosition,
+      scrollToInitialPosition,
+      scrollRestoration,
+      scrollToItem,
+    } = controller;
+    const items = React.Children.toArray(children);
+    const itemCount = items.length;
 
-      const item = cache.getItemByKey(key);
+    useEffect(() => {
+      React.Children.forEach(children, (child, index) => {
+        let key = `@@${index}`;
 
-      if (!item) {
-        cache.setItem(key, index, cache.estimatedItemHeight);
-        return;
-      }
+        if (isItemChildWithProps(child)) {
+          key = String(child.key ?? child.props.hyperId ?? key);
+        }
 
-      if (item) {
-        item.index = index;
-      }
-    });
-  }, [children, cache]);
+        const item = cache.getItemByKey(key);
 
-  useEffect(() => {
-    setItemCount(itemCount);
-  }, [setItemCount, itemCount]);
+        if (!item) {
+          cache.setItem(key, index, cache.estimatedItemHeight);
+          return;
+        }
 
-  useEffect(() => {
-    resetState();
-    updateProjection();
-  }, [cache.key, updateProjection, resetState]);
+        if (item) {
+          item.index = index;
+        }
+      });
+    }, [children, cache]);
 
-  useLayoutEffect(() => {
-    if (scrollRestoration) {
-      restoreScrollPosition(cache);
-    } else {
-      scrollToInitialPosition();
-    }
+    useEffect(() => {
+      setItemCount(itemCount);
+    }, [setItemCount, itemCount]);
 
-    return () => {
-      saveScrollPosition(cache);
-    };
-  }, [
-    cache,
-    scrollRestoration,
-    scrollToInitialPosition,
-    saveScrollPosition,
-    restoreScrollPosition,
-  ]);
+    useEffect(() => {
+      resetState();
+      updateProjection();
+    }, [cache.key, updateProjection, resetState]);
 
-  const { firstIndex, lastIndex, paddingBottom, paddingTop } = controller.state;
-  const projection = [];
-
-  if (itemCount) {
-    for (let index = firstIndex; index <= lastIndex; index++) {
-      const item = items[index];
-      const ref = createItemRef(index);
-      let key = `@@${index}`;
-      let projectionItem: JSX.Element;
-
-      if (isHyperScrollerItemChild(item)) {
-        key = String(sanitizeReactKey(item.key) ?? item.props.hyperId ?? key);
-
-        projectionItem = React.cloneElement(item, {
-          ...item.props,
-          index,
-          ref: combineRefs(item.props.ref, ref),
-          key,
-          hyperId: key,
-        });
-      } else if (isItemChildWithProps(item)) {
-        const { hyperId, ...props } = item.props;
-        key = String(sanitizeReactKey(item.key) ?? hyperId ?? key);
-
-        const clonedItem = React.cloneElement(item, {
-          ...props,
-        });
-
-        projectionItem = (
-          <HyperScrollerItem
-            key={key}
-            as="div"
-            index={index}
-            hyperId={key}
-            ref={createItemRef(index)}
-          >
-            {clonedItem}
-          </HyperScrollerItem>
-        );
+    useLayoutEffect(() => {
+      if (scrollRestoration) {
+        restoreScrollPosition(cache);
       } else {
-        projectionItem = (
-          <HyperScrollerItem
-            key={key}
-            as="div"
-            index={index}
-            hyperId={key}
-            ref={createItemRef(index)}
-          >
-            {item}
-          </HyperScrollerItem>
-        );
+        scrollToInitialPosition();
       }
 
-      projection[projection.length] = projectionItem;
-    }
-  }
+      return () => {
+        saveScrollPosition(cache);
+      };
+    }, [
+      cache,
+      scrollRestoration,
+      scrollToInitialPosition,
+      saveScrollPosition,
+      restoreScrollPosition,
+    ]);
 
-  return (
-    <HyperScrollerContext.Provider value={controller}>
-      <div ref={scrollerRef}>
-        <div style={{ height: paddingTop }} />
-        {projection}
-        <div style={{ height: paddingBottom }} />
-      </div>
-    </HyperScrollerContext.Provider>
-  );
-}
+    const { firstIndex, lastIndex, paddingBottom, paddingTop } =
+      controller.state;
+    const projection = [];
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        scrollToItem,
+      }),
+      [scrollToItem],
+    );
+
+    if (itemCount) {
+      for (let index = firstIndex; index <= lastIndex; index++) {
+        const item = items[index];
+        const ref = createItemRef(index);
+        let key = `@@${index}`;
+        let projectionItem: JSX.Element;
+
+        if (isHyperScrollerItemChild(item)) {
+          key = String(sanitizeReactKey(item.key) ?? item.props.hyperId ?? key);
+
+          projectionItem = React.cloneElement(item, {
+            ...item.props,
+            index,
+            ref: combineRefs(item.props.ref, ref),
+            key,
+            hyperId: key,
+          });
+        } else if (isItemChildWithProps(item)) {
+          const { hyperId, ...props } = item.props;
+          key = String(sanitizeReactKey(item.key) ?? hyperId ?? key);
+
+          const clonedItem = React.cloneElement(item, {
+            ...props,
+          });
+
+          projectionItem = (
+            <HyperScrollerItem
+              key={key}
+              as="div"
+              index={index}
+              hyperId={key}
+              ref={createItemRef(index)}
+            >
+              {clonedItem}
+            </HyperScrollerItem>
+          );
+        } else {
+          projectionItem = (
+            <HyperScrollerItem
+              key={key}
+              as="div"
+              index={index}
+              hyperId={key}
+              ref={createItemRef(index)}
+            >
+              {item}
+            </HyperScrollerItem>
+          );
+        }
+
+        projection[projection.length] = projectionItem;
+      }
+    }
+
+    return (
+      <HyperScrollerContext.Provider value={controller}>
+        <div ref={scrollerRef}>
+          <div style={{ height: paddingTop }} />
+          {projection}
+          <div style={{ height: paddingBottom }} />
+        </div>
+      </HyperScrollerContext.Provider>
+    );
+  },
+) as HyperScroller;
 
 HyperScroller.displayName = 'HyperScroller';
 
@@ -711,7 +734,7 @@ HyperScrollerItem.displayName = 'HyperScrollerItem';
 
 HyperScroller.Item = HyperScrollerItem;
 
-export default HyperScroller as HyperScroller;
+export default HyperScroller;
 
 function isHyperScrollerItemChild(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

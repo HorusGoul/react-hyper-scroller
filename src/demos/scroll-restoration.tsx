@@ -1,9 +1,6 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import HyperScroller, {
-  HyperScrollerCache,
-  useHyperScrollerController,
-} from '../lib';
+import HyperScroller, { HyperScrollerCache } from '../lib';
 import { createItems, PRECALCULATED_ITEM_HEIGHT } from '../utils';
 
 const items = createItems();
@@ -15,13 +12,6 @@ function App() {
   function toggle() {
     setShowing(!showing);
   }
-
-  const controller = useHyperScrollerController({
-    estimatedItemHeight: PRECALCULATED_ITEM_HEIGHT,
-    targetView: window,
-    scrollRestoration: true,
-    cache: HyperScrollerCache.getOrCreateCache(cacheKey),
-  });
 
   return (
     <>
@@ -47,7 +37,11 @@ function App() {
       </div>
 
       {showing && (
-        <HyperScroller controller={controller}>
+        <HyperScroller
+          estimatedItemHeight={PRECALCULATED_ITEM_HEIGHT}
+          scrollRestoration={true}
+          cache={HyperScrollerCache.getOrCreateCache(cacheKey)}
+        >
           {items.map((item) => (
             <div data-testid={`item-${item.id}`} key={item.id}>
               <div style={{ height: item.height }}>{item.text}</div>
