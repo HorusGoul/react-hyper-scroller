@@ -9,7 +9,7 @@ import { createItems, PRECALCULATED_ITEM_HEIGHT } from '../utils';
 const items = createItems();
 
 function App() {
-  const [itemId, setItemId] = React.useState('id-0');
+  const [itemId, setItemId] = React.useState('id-99');
 
   const controller = useHyperScrollerController({
     estimatedItemHeight: PRECALCULATED_ITEM_HEIGHT,
@@ -31,7 +31,7 @@ function App() {
           id="item-id"
           data-testid="item-id"
           onChange={(e) => setItemId(e.target.value)}
-          defaultValue="id-0"
+          defaultValue="id-99"
           placeholder="Item ID"
         />
         <button

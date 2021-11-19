@@ -48,6 +48,8 @@ interface UseHyperScrollerParams {
    * Number of items that will be rendered before and after the
    * ones that are shown in the viewport.
    *
+   * The minimum value is 2.
+   *
    * @defaultValue 2
    */
   overscanItemCount?: number;
@@ -131,6 +133,8 @@ export function useHyperScrollerController({
   scrollRestoration = false,
   measureItems = true,
 }: UseHyperScrollerParams): HyperScrollerController {
+  overscanItemCount = Math.max(overscanItemCount, 2);
+
   const [itemCount, setItemCount] = useState(0);
 
   // State
@@ -196,7 +200,7 @@ export function useHyperScrollerController({
   useEffect(() => {
     return () => {
       if (scrollToItemRAFRef.current) {
-        cancelAnimationFrame(scrollToItemRAFRef.current);
+        window.cancelAnimationFrame(scrollToItemRAFRef.current);
       }
     };
   }, []);
@@ -210,7 +214,7 @@ export function useHyperScrollerController({
       }
 
       const item = internalCache.getItemByKey(key);
-      const position = internalCache.getItemScrollPosition(key);
+      const position = item?.position;
 
       if (!item || position === undefined) {
         return;
@@ -274,6 +278,24 @@ export function useHyperScrollerController({
     [internalCache, estimatedItemHeight],
   );
 
+  // We save the previous scroll positions to prevent infinite loops.
+  // These loops are usually produced by having a scrollY position that renders
+  // an item. The height of that item will change the scrollY, triggering the updateProjection
+  // function again, but in this case, the scrollY won't render that item.
+  // When this happens, the scrollY returns back to the previous one, which
+  // triggers the updateProjection function again to render the same item that we just removed.
+  //
+  // To prevent this, we save the previous scroll positions and if the scrollY is found in this
+  // stack of four positions, we cancel the update.
+  const prevScrollPositionsRef = useRef<[number, number, number, number]>([
+    -1, -1, -1, -1,
+  ]);
+
+  useEffect(() => {
+    // Reset the previous scroll positions when the cache is replaced.
+    prevScrollPositionsRef.current = [-1, -1, -1, -1];
+  }, [internalCache]);
+
   const updateProjection = useCallback(() => {
     if (!itemCount) {
       return;
@@ -305,55 +327,79 @@ export function useHyperScrollerController({
       viewport.scrollY = 0;
     }
 
+    // Count the number of times the scrollY appears in the loopCountRef.current
+    let times = 0;
+
+    for (let i = 0; i < prevScrollPositionsRef.current.length; i++) {
+      if (prevScrollPositionsRef.current[i] === viewport.scrollY) {
+        times++;
+      }
+    }
+
+    if (times >= 2) {
+      // Infinite loop detected, cancel update.
+      return;
+    }
+
+    prevScrollPositionsRef.current.pop();
+    prevScrollPositionsRef.current.unshift(viewport.scrollY);
+
     let firstIndex: number | undefined;
     let lastIndex: number | undefined;
     let paddingTop = 0;
     let paddingBottom = 0;
 
     if (measureItems) {
-      const visibleItemsMaxTop = viewport.scrollY + viewport.height;
-      let visibleItemsHeight = 0;
-      let itemsHeightSum = 0;
+      const item = internalCache.getItemByScrollPosition(viewport.scrollY);
+      let availableHeight = viewport.height;
 
-      // TODO: Use binary search to find the first index
-      for (let i = 0; i < itemCount; i++) {
-        const prevSum = itemsHeightSum;
-        itemsHeightSum += calculateRowHeight(i);
+      if (!item) {
+        return;
+      }
 
-        if (itemsHeightSum >= viewport.scrollY && firstIndex === undefined) {
-          paddingTop = prevSum;
-          firstIndex = i - overscanItemCount;
+      firstIndex = Math.max(item.index - overscanItemCount, 0);
 
-          if (firstIndex < 0) {
-            firstIndex = 0;
-          }
+      const firstItem = internalCache.getItemByIndex(firstIndex);
 
-          for (let j = firstIndex; j < i; j++) {
-            paddingTop -= calculateRowHeight(j);
-          }
-        }
+      if (firstItem) {
+        paddingTop = firstItem.position;
+      } else {
+        paddingTop = 0;
+      }
 
-        if (
-          (itemsHeightSum >= visibleItemsMaxTop && !lastIndex) ||
-          (i === itemCount - 1 && !lastIndex)
-        ) {
-          lastIndex = i + overscanItemCount;
-          visibleItemsHeight = itemsHeightSum;
+      // Calculate the lastIndex based on the available height by checking the item heights
+      // and subtracting the estimated item height
+      for (let i = item.index; i < itemCount; i++) {
+        const itemHeight = calculateRowHeight(i);
+        availableHeight -= itemHeight;
 
-          if (lastIndex >= itemCount) {
-            lastIndex = itemCount - 1;
-          }
-
-          for (let j = lastIndex; j > i; j--) {
-            visibleItemsHeight += calculateRowHeight(j);
-          }
+        if (availableHeight < 0) {
+          lastIndex = i;
+          break;
         }
       }
 
-      paddingBottom = itemsHeightSum - visibleItemsHeight;
+      if (lastIndex === undefined) {
+        lastIndex = Math.max(itemCount - 1, 0);
+      } else {
+        lastIndex = Math.min(lastIndex + overscanItemCount, itemCount - 1);
+      }
 
-      if (paddingBottom < 0) {
+      if (lastIndex === itemCount - 1) {
         paddingBottom = 0;
+      } else {
+        const lastProjectionItem = internalCache.getItemByIndex(lastIndex);
+        const lastListItem = internalCache.getItemByIndex(itemCount - 1);
+
+        if (lastProjectionItem && lastListItem) {
+          const viewTopToProjectionBottomDistance =
+            lastProjectionItem.position + lastProjectionItem.height;
+          const maxHeight = lastListItem.position + lastListItem.height;
+
+          paddingBottom = maxHeight - viewTopToProjectionBottomDistance;
+        } else {
+          paddingBottom = 0;
+        }
       }
     } else {
       // When we're not measuring items, we assume that all the items have the same height
@@ -583,8 +629,10 @@ function HyperScroller({ children, controller }: HyperScrollerProps) {
 
   return (
     <HyperScrollerContext.Provider value={controller}>
-      <div ref={scrollerRef} style={{ paddingTop, paddingBottom }}>
+      <div ref={scrollerRef}>
+        <div style={{ height: paddingTop }} />
         {projection}
+        <div style={{ height: paddingBottom }} />
       </div>
     </HyperScrollerContext.Provider>
   );
@@ -612,8 +660,7 @@ const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
     { children, as: Component = 'div', index = -1, hyperId = `@@${index}` },
     forwardedRef,
   ) {
-    const { cache, scheduleUpdateProjection, measureItems } =
-      useContext(HyperScrollerContext);
+    const { cache, measureItems } = useContext(HyperScrollerContext);
     const innerRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
@@ -650,14 +697,7 @@ const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
         unmounted = true;
         resizeObserver.disconnect();
       };
-    }, [
-      innerRef,
-      cache,
-      index,
-      hyperId,
-      scheduleUpdateProjection,
-      measureItems,
-    ]);
+    }, [innerRef, cache, index, hyperId, measureItems]);
 
     return (
       <Component ref={combineRefs(innerRef, forwardedRef)}>
