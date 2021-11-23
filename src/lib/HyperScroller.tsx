@@ -274,11 +274,15 @@ function useHyperScrollerController({
 
   const calculateRowHeight = useCallback(
     (index: number) => {
-      const height = internalCache.getItemByIndex(index)?.height;
+      const item = internalCache.getItemByIndex(index);
 
-      return height || estimatedItemHeight;
+      if (!item || !item.measured) {
+        return internalCache.estimatedItemHeight;
+      }
+
+      return item.height;
     },
-    [internalCache, estimatedItemHeight],
+    [internalCache],
   );
 
   // We save the previous scroll positions to prevent infinite loops.
@@ -711,7 +715,7 @@ const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
         }
 
         const { height } = entry.contentRect;
-        cache.setItem(hyperId, index, height);
+        cache.setItem(hyperId, index, height, true);
       });
 
       resizeObserver.observe(element);

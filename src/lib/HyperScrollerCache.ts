@@ -3,6 +3,7 @@ interface HyperScrollerCacheItem {
   height: number;
   index: number;
   position: number;
+  measured: boolean;
 }
 
 export class HyperScrollerCache {
@@ -33,7 +34,7 @@ export class HyperScrollerCache {
     this.key = cacheKey;
   }
 
-  public setItem(key: string, index: number, height: number) {
+  public setItem(key: string, index: number, height: number, measured = false) {
     const prevItemIndex = index - 1;
     let position = 0;
 
@@ -48,6 +49,7 @@ export class HyperScrollerCache {
       height,
       index,
       position,
+      measured,
     };
 
     this.itemsByKey[key] = cacheItem;
@@ -82,9 +84,11 @@ export class HyperScrollerCache {
       const item = this.itemsByIndex[mid];
 
       if (item) {
+        const height = item.measured ? item.height : this.estimatedItemHeight;
+
         if (
           item.position <= scrollPosition &&
-          item.position + item.height > scrollPosition
+          item.position + height > scrollPosition
         ) {
           return item;
         }
@@ -109,8 +113,10 @@ export class HyperScrollerCache {
       const item = this.itemsByIndex[i];
 
       if (item) {
+        const height = item.measured ? item.height : this.estimatedItemHeight;
+
         item.position = position;
-        position += item.height;
+        position += height;
       }
     }
   }
