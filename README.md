@@ -1,3 +1,6 @@
+<center>
+<img src="./logo.svg" height="100">
+
 # react-hyper-scroller
 
 [![NPM](https://img.shields.io/npm/v/react-hyper-scroller.svg)](https://www.npmjs.com/package/react-hyper-scroller)
@@ -9,28 +12,27 @@
 [![License][twitter-badge]][twitter]
 [![License][star-badge]][star]
 
-> Virtual Scroller built for the mobile web
+Hyper-fast virtual lists for React apps and websites
 
-## Install
+</center>
 
-```bash
-npm install --save react-hyper-scroller
-```
+## Docs, usage, examples, demos and more available in [react-hyper-scroller.horus.dev](https://react-hyper-scroller.horus.dev/docs/intro)
 
-## Demo
+**Note:** If you're targeting old browsers, you'll need to polyfill the [`ResizerObserver`](https://developer.mozilla.org/en-US/docs/Web/API/ResizeObserver) API.
 
-[![Edit Window Virtual Scroller v2 Example](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/embed/ym52j0n741?fontsize=14&view=preview)
+## Features
 
-## Links
+- Easy to use. Virtualize your lists with ease.
+- Supports virtual lists with items of different sizes by default
+- Scroll restoration
+- Scroll to item by key
+- It's tiny! [![Bundlephobia][bundlephobia-badge]][bundlephobia]
 
-- [Demo](https://codesandbox.io/embed/ym52j0n741?fontsize=14&view=preview)
-- [Typedoc](https://horusgoul.github.io/react-hyper-scroller)
-- [Examples](./examples.md)
-- [Contributing](./contributing.md)
+## Support me
 
-## Usage
+Feel free to buy me a coffee if you enjoy my open source work 😄
 
-- [Props](https://horusgoul.github.io/react-hyper-scroller/interfaces/ihyperscrollerprops.html)
+<a href="https://www.buymeacoffee.com/horus" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-black.png" alt="Buy Me A Coffee" height="48px"></a>
 
 ## Contributors
 

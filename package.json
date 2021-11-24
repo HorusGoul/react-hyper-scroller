@@ -1,7 +1,7 @@
 {
   "name": "react-hyper-scroller",
-  "description": "Hyper-Fast Scroller for the web",
-  "version": "3.0.0-beta.13",
+  "description": "Hyper-fast virtual lists for React apps and websites",
+  "version": "3.0.0",
   "keywords": [
     "virtual list",
     "scroller",
