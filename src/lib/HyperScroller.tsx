@@ -33,7 +33,7 @@ interface HyperScroller
   Item: typeof HyperScrollerItem;
 }
 
-interface UseHyperScrollerParams {
+interface HyperScrollerConfig {
   /**
    * Estimated height that will be used on initial
    * render for each item.
@@ -75,7 +75,7 @@ interface UseHyperScrollerParams {
    * Allows telling the component whether you want it to
    * restore the scroll or not.
    *
-   * Scroll restoration depends on the `cacheKey` as it
+   * Scroll restoration depends on the `cache` as it
    * will retrieve the latest scroll position from the cache.
    *
    * @defaultValue false
@@ -90,6 +90,10 @@ interface UseHyperScrollerParams {
   measureItems?: boolean;
 }
 
+interface UseHyperScrollerControllerParams extends HyperScrollerConfig {
+  itemCount: number;
+}
+
 interface ScrollToItemOptions {
   /**
    * Adjustment to the final scroll position.
@@ -100,7 +104,6 @@ interface ScrollToItemOptions {
 }
 
 interface HyperScrollerController {
-  setItemCount(itemsCount: number): void;
   createItemRef(index: number): React.RefObject<HTMLElement>;
   updateProjection(): void;
   scheduleUpdateProjection(): void;
@@ -116,6 +119,7 @@ interface HyperScrollerController {
     paddingBottom: number;
     firstIndex: number;
     lastIndex: number;
+    isInitialState: boolean;
   };
 
   scrollerRef: React.RefObject<HTMLDivElement>;
@@ -129,16 +133,15 @@ interface HyperScrollerController {
 
 function useHyperScrollerController({
   estimatedItemHeight,
+  itemCount = 0,
   cache,
   targetView = window,
   overscanItemCount = 2,
   initialScrollPosition = 0,
   scrollRestoration = false,
   measureItems = true,
-}: UseHyperScrollerParams): HyperScrollerController {
+}: UseHyperScrollerControllerParams): HyperScrollerController {
   overscanItemCount = Math.max(overscanItemCount, 2);
-
-  const [itemCount, setItemCount] = useState(0);
 
   // State
   const [state, setState] = useState<HyperScrollerController['state']>(() => ({
@@ -435,6 +438,7 @@ function useHyperScrollerController({
       lastIndex: lastIndex ?? 0,
       paddingBottom,
       paddingTop,
+      isInitialState: false,
     });
   }, [
     internalCache,
@@ -486,7 +490,6 @@ function useHyperScrollerController({
     state,
 
     // Functions
-    setItemCount,
     updateProjection,
     scheduleUpdateProjection,
     resetState,
@@ -508,7 +511,7 @@ function useHyperScrollerController({
   };
 }
 
-interface HyperScrollerProps extends UseHyperScrollerParams {
+interface HyperScrollerProps extends HyperScrollerConfig {
   children: React.ReactNode;
 }
 
@@ -522,9 +525,14 @@ export function useHyperScrollerRef() {
 
 const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
   function HyperScroller({ children, ...params }, ref) {
-    const controller = useHyperScrollerController(params);
+    const items = React.Children.toArray(children);
+    const itemCount = items.length;
+
+    const controller = useHyperScrollerController({
+      itemCount,
+      ...params,
+    });
     const {
-      setItemCount,
       createItemRef,
       updateProjection,
       resetState,
@@ -536,8 +544,9 @@ const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
       scrollRestoration,
       scrollToItem,
     } = controller;
-    const items = React.Children.toArray(children);
-    const itemCount = items.length;
+
+    const { firstIndex, lastIndex, paddingBottom, paddingTop, isInitialState } =
+      controller.state;
 
     useEffect(() => {
       React.Children.forEach(children, (child, index) => {
@@ -561,15 +570,15 @@ const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
     }, [children, cache]);
 
     useEffect(() => {
-      setItemCount(itemCount);
-    }, [setItemCount, itemCount]);
-
-    useEffect(() => {
       resetState();
       updateProjection();
     }, [cache.key, updateProjection, resetState]);
 
     useLayoutEffect(() => {
+      if (isInitialState) {
+        return;
+      }
+
       if (scrollRestoration) {
         restoreScrollPosition(cache);
       } else {
@@ -580,16 +589,13 @@ const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
         saveScrollPosition(cache);
       };
     }, [
+      isInitialState,
       cache,
       scrollRestoration,
       scrollToInitialPosition,
       saveScrollPosition,
       restoreScrollPosition,
     ]);
-
-    const { firstIndex, lastIndex, paddingBottom, paddingTop } =
-      controller.state;
-    const projection = [];
 
     useImperativeHandle(
       ref,
@@ -598,6 +604,8 @@ const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
       }),
       [scrollToItem],
     );
+
+    const projection: JSX.Element[] = [];
 
     if (itemCount) {
       for (let index = firstIndex; index <= lastIndex; index++) {
@@ -690,7 +698,7 @@ const HyperScrollerItem = forwardRef<HTMLElement, HyperScrollerItemProps>(
     const { cache, measureItems } = useContext(HyperScrollerContext);
     const innerRef = useRef<HTMLElement>(null);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
       if (!measureItems) {
         return;
       }

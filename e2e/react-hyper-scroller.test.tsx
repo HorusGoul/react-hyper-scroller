@@ -43,6 +43,8 @@ describe('Window as targetView', () => {
 
     await page.$eval('#root', (e) => e.innerHTML);
 
+    const initialScroll = await getScrollY();
+
     await scrollByInnerHeight(page);
     await scrollByInnerHeight(page);
     await scrollByInnerHeight(page);
@@ -57,6 +59,7 @@ describe('Window as targetView', () => {
 
     const scrollAfterMount = await getScrollY();
 
+    expect(scrollBeforeUnmount).not.toBe(initialScroll);
     expect(scrollAfterMount).toBe(scrollBeforeUnmount);
     expect(scrollAfterUnmount).toBe(0);
   });

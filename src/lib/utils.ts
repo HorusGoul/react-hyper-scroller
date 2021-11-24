@@ -5,6 +5,7 @@ export const defaultHyperScrollerState = {
   lastIndex: 0,
   paddingBottom: 0,
   paddingTop: 0,
+  isInitialState: true,
 };
 
 export function isWindow(
