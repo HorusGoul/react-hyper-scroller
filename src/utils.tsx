@@ -14,16 +14,20 @@ export function createItems(itemsToGenerate = DEFAULT_ITEMS_TO_GENERATE) {
   const items: ListItem[] = [];
 
   for (let i = 0; i < itemsToGenerate; i++) {
-    const height =
-      Math.floor(Math.random() * (MAX_ITEM_HEIGHT - MIN_ITEM_HEIGHT)) +
-      MIN_ITEM_HEIGHT;
-
-    items.push({
-      id: 'id-' + i,
-      text: `Item ${i}. Height: ${height}`,
-      height,
-    });
+    items.push(createItem(i));
   }
 
   return items;
+}
+
+export function createItem(index: number): ListItem {
+  const height =
+    Math.floor(Math.random() * (MAX_ITEM_HEIGHT - MIN_ITEM_HEIGHT)) +
+    MIN_ITEM_HEIGHT;
+
+  return {
+    id: 'id-' + index,
+    text: `Item ${index}. Height: ${height}`,
+    height,
+  };
 }

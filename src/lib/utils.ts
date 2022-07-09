@@ -73,7 +73,14 @@ export function combineRefs<T>(
 
 export function sanitizeReactKey(key: React.Key | null) {
   if (key) {
-    key = key.toString().slice(2);
+    key = key.toString();
+
+    const firstIndexOfDollar = key.indexOf('$');
+
+    key =
+      firstIndexOfDollar > -1
+        ? key.substring(firstIndexOfDollar + 1)
+        : key.slice(2);
 
     if (key === '') {
       return null;

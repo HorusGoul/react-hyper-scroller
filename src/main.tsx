@@ -30,6 +30,9 @@ function App() {
         <li>
           <a href="/demos/5000-elements.html">5000 elements</a>
         </li>
+        <li>
+          <a href="/demos/updating-children.html">Updating children</a>
+        </li>
       </ul>
     </>
   );

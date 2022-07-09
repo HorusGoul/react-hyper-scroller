@@ -316,6 +316,30 @@ describe('HTMLElement as targetView', () => {
       expect(top).toBeGreaterThanOrEqual(0);
     },
   );
+
+  test('should not show an empty projection after adding new children and not updating the scroll position', async () => {
+    await page.goto('http://localhost:3000/demos/updating-children.html');
+
+    let html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item 99`);
+    expect(html).toContain(`Item 98`);
+    expect(html).toContain(`Item 97`);
+
+    await addItem();
+
+    html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item 100`);
+
+    await addItem();
+
+    html = await page.$eval('#root', (e) => e.innerHTML);
+    expect(html).toContain(`Item 101`);
+
+    async function addItem() {
+      await click('#update-items');
+      await delay(100);
+    }
+  });
 });
 
 describe('measureItems: false', () => {

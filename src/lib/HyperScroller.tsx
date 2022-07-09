@@ -302,9 +302,9 @@ function useHyperScrollerController({
   ]);
 
   useEffect(() => {
-    // Reset the previous scroll positions when the cache is replaced.
+    // Reset the previous scroll positions when the cache is replaced or the item count changes.
     prevScrollPositionsRef.current = [-1, -1, -1, -1];
-  }, [internalCache]);
+  }, [internalCache, itemCount]);
 
   const updateProjection = useCallback(() => {
     if (!itemCount) {
@@ -553,7 +553,7 @@ const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
         let key = `@@${index}`;
 
         if (isItemChildWithProps(child)) {
-          key = String(child.key ?? child.props.hyperId ?? key);
+          key = String(child.props.hyperId ?? child.key ?? key);
         }
 
         const item = cache.getItemByKey(key);
@@ -614,19 +614,36 @@ const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
         let key = `@@${index}`;
         let projectionItem: JSX.Element;
 
+        function getReactKey() {
+          let reactKey =
+            typeof item === 'object' && 'key' in item ? String(item.key) : null;
+
+          if (reactKey && !reactKey.includes('$')) {
+            reactKey = null;
+          }
+
+          if (!reactKey) {
+            reactKey = key;
+          }
+
+          return reactKey;
+        }
+
         if (isHyperScrollerItemChild(item)) {
-          key = String(sanitizeReactKey(item.key) ?? item.props.hyperId ?? key);
+          key = getReactKey();
 
           projectionItem = React.cloneElement(item, {
             ...item.props,
             index,
             ref: combineRefs(item.props.ref, ref),
             key,
-            hyperId: key,
+            hyperId: item.props.hyperId ?? sanitizeReactKey(item.key) ?? key,
           });
         } else if (isItemChildWithProps(item)) {
-          const { hyperId, ...props } = item.props;
-          key = String(sanitizeReactKey(item.key) ?? hyperId ?? key);
+          // eslint-disable-next-line
+          let { hyperId, ...props } = item.props;
+          key = getReactKey();
+          hyperId = hyperId ?? sanitizeReactKey(item.key) ?? key;
 
           const clonedItem = React.cloneElement(item, {
             ...props,
@@ -637,7 +654,7 @@ const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
               key={key}
               as="div"
               index={index}
-              hyperId={key}
+              hyperId={hyperId}
               ref={createItemRef(index)}
             >
               {clonedItem}
