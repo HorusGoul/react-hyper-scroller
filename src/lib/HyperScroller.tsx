@@ -513,6 +513,15 @@ function useHyperScrollerController({
 
 interface HyperScrollerProps extends HyperScrollerConfig {
   children: React.ReactNode;
+
+  /**
+   * Before the first render of the projection, the scroller will render part of the list
+   * as placeholders.
+   *
+   * This is the number of items that will be rendered before the first
+   * projection is calculated.
+   */
+  itemsToShowBeforeFirstProjection?: number;
 }
 
 export interface HyperScrollerRef {
@@ -524,7 +533,10 @@ export function useHyperScrollerRef() {
 }
 
 const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
-  function HyperScroller({ children, ...params }, ref) {
+  function HyperScroller(
+    { children, itemsToShowBeforeFirstProjection = 1, ...params },
+    ref,
+  ) {
     const items = React.Children.toArray(children);
     const itemCount = items.length;
 
@@ -545,8 +557,9 @@ const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
       scrollToItem,
     } = controller;
 
-    const { firstIndex, lastIndex, paddingBottom, paddingTop, isInitialState } =
+    const { firstIndex, paddingBottom, paddingTop, isInitialState } =
       controller.state;
+    let { lastIndex } = controller.state;
 
     useEffect(() => {
       React.Children.forEach(children, (child, index) => {
@@ -608,6 +621,13 @@ const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
     const projection: JSX.Element[] = [];
 
     if (itemCount) {
+      if (isInitialState && itemsToShowBeforeFirstProjection) {
+        lastIndex = Math.min(
+          firstIndex + itemsToShowBeforeFirstProjection,
+          itemCount,
+        );
+      }
+
       for (let index = firstIndex; index <= lastIndex; index++) {
         const item = items[index];
         const ref = createItemRef(index);

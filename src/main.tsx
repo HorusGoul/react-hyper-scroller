@@ -33,6 +33,11 @@ function App() {
         <li>
           <a href="/demos/updating-children.html">Updating children</a>
         </li>
+        <li>
+          <a href="/demos/items-to-show-before-first-projection.html">
+            Items to show before the first projection
+          </a>
+        </li>
       </ul>
     </>
   );

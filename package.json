@@ -1,7 +1,7 @@
 {
   "name": "react-hyper-scroller",
   "description": "Hyper-fast virtual lists for React apps and websites",
-  "version": "3.0.1",
+  "version": "3.1.0-beta.01",
   "keywords": [
     "virtual list",
     "scroller",
@@ -41,15 +41,15 @@
     ]
   },
   "peerDependencies": {
-    "react": "^16.8 || ^17",
-    "react-dom": "^16.8 || ^17"
+    "react": "^16.8 || ^17 || ^18",
+    "react-dom": "^16.8 || ^17 || ^18"
   },
   "devDependencies": {
     "@types/jest": "^27.0.2",
     "@types/jest-environment-puppeteer": "^4.4.1",
     "@types/node": "^16.11.7",
-    "@types/react": "^17.0.0",
-    "@types/react-dom": "^17.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",
     "@vitejs/plugin-react": "^1.0.0",
