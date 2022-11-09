@@ -655,7 +655,7 @@ const HyperScroller = forwardRef<HyperScrollerRef, HyperScrollerProps>(
           projectionItem = React.cloneElement(item, {
             ...item.props,
             index,
-            ref: combineRefs(item.props.ref, ref),
+            ref: combineRefs(item.props.ref ?? item.ref, ref),
             key,
             hyperId: item.props.hyperId ?? sanitizeReactKey(item.key) ?? key,
           });
@@ -790,7 +790,9 @@ function isHyperScrollerItemChild(
   item: any,
 ): item is React.ReactElement<
   React.ComponentPropsWithRef<typeof HyperScrollerItem>
-> {
+> & {
+  ref: React.Ref<HTMLElement>;
+} {
   return item?.type?.displayName === HyperScrollerItem.displayName;
 }
 
